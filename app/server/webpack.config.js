@@ -6,6 +6,7 @@ module.exports = {
         'sequence_labeling': './static/js/sequence_labeling.js',
         'document_classification': './static/js/document_classification.js',
         'seq2seq': './static/js/seq2seq.js',
+        'audio_labeling': './static/js/audio_labeling.js',
         'projects': './static/js/projects.js',
         'stats': './static/js/stats.js',
         'label': './static/js/label.js',

@@ -54,10 +54,20 @@ class Project(models.Model):
             'document_serializer': '',
             'annotations_serializer': '',
         },
+
+        'AudioLabeling': {
+            'title': 'audio labeling',
+            'type': 'AudioLabeling',
+            'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
+            'template_html': 'annotation/audio_labeling.html',
+            'document_serializer': '',
+            'annotations_serializer': '',
+        },
     }
     DOCUMENT_CLASSIFICATION = 'DocumentClassification'
     SEQUENCE_LABELING = 'SequenceLabeling'
     Seq2seq = 'Seq2seq'
+    AUDIO_LABELING = 'AudioLabeling'
 
     # PROJECT_CHOICES = (
     #     (DOCUMENT_CLASSIFICATION, 'document classification'),
@@ -143,6 +153,11 @@ class Project(models.Model):
                 docs = docs.exclude(seq2seq_annotations__user=user)
             else:
                 docs = docs.filter(seq2seq_annotations__isnull=is_null)
+        elif self.is_type_of(Project.AUDIO_LABELING):
+            if user:
+                docs = docs.exclude(audio_annotations__user=user)
+            else:
+                docs = docs.filter(audio_annotations__isnull=is_null)
         else:
             print('Project type: '+self.project_type)
             raise ValueError('Invalid project_type')
@@ -363,6 +378,13 @@ class SequenceAnnotation(Annotation):
 
 class Seq2seqAnnotation(Annotation):
     document = models.ForeignKey(Document, related_name='seq2seq_annotations', on_delete=models.CASCADE)
+    text = models.TextField()
+
+    class Meta:
+        unique_together = ('document', 'user', 'text')
+
+class AudioAnnotation(Annotation):
+    document = models.ForeignKey(Document, related_name='audio_annotations', on_delete=models.CASCADE)
     text = models.TextField()
 
     class Meta:
