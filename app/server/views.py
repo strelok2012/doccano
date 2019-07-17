@@ -6,6 +6,7 @@ import logging
 import datetime
 import pandas as pd
 
+import s3fs
 import requests
 
 from string import Template
@@ -457,8 +458,10 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
         import_format = request.POST['format']
         try:
             if (request.POST['url']):
-                r = requests.get(request.POST['url']) 
-                file = BytesIO(r.content)
+                # r = requests.get(request.POST['url'])
+                # file = BytesIO(r.content)
+                s3 = s3fs.S3FileSystem(anon=False)
+                file = s3.open(request.POST['url'], 'rb')
                 import_format = import_format.replace('_url', '')
             else:
                 file = request.FILES['file'].file
@@ -548,7 +551,6 @@ class DocumentExport(SuperUserMixin, LoginRequiredMixin, View):
 
 class DataExportToS3(SuperUserMixin, LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        import s3fs
         s3 = s3fs.S3FileSystem(anon=False)
 
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])
