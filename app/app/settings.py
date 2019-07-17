@@ -15,12 +15,11 @@ import sys
 import django_heroku
 import dj_database_url
 
-ML_FOLDER = 'ml_models'
-OUTPUT_FILE = 'ml_out.csv'
-INPUT_FILE = 'ml_input.csv'
-
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ML_FOLDER = os.path.join(BASE_DIR, 'ml_models/')
+OUTPUT_FILE = os.path.join(ML_FOLDER, 'ml_out.csv')
+INPUT_FILE = os.path.join(ML_FOLDER, 'ml_input.csv')
 
 
 # Quick-start development settings - unsuitable for production
@@ -32,11 +31,13 @@ SECRET_KEY = os.environ.get(
     'v8sk33sy82!uw3ty=!jjv5vp7=s2phrzw(m(hrn^f7e_#1h2al')
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG = False
 DEBUG = True
 if os.environ.get('DEBUG') == 'False':
     DEBUG = False
 # DEBUG = bool(os.environ.get('DEBUG', False))
 # DEBUG = os.environ.get('DEBUG') == 'TRUE'
+
 
 # ALLOWED_HOSTS = []
 
@@ -60,6 +61,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'djdev_panel.middleware.DebugMiddleware',  # <--- this guy
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -149,7 +151,8 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     },
 }
-DATABASES['default'] = DATABASES['posgres']
+# DATABASES['default'] = DATABASES['posgres']
+DATABASES['default'] = DATABASES['posgres_local']
 
 if "test" in sys.argv:
     DATABASES = {    
@@ -250,5 +253,7 @@ AZURE_APPINSIGHTS_IKEY = os.getenv('AZURE_APPINSIGHTS_IKEY')
 APPLICATION_INSIGHTS = {
     'ikey': AZURE_APPINSIGHTS_IKEY if AZURE_APPINSIGHTS_IKEY else None,
 }
+
+ML_FOLDER = 'ml_models'
 
 django_heroku.settings(locals(), test_runner=False)

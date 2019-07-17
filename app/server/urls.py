@@ -13,10 +13,9 @@ router = routers.DefaultRouter()
 router.register(r'projects', ProjectViewSet)
 router.register(r'users', UserViewSet)
 
-
-
 urlpatterns = [
     path('', IndexView.as_view(), name='index'),
+    # path('api/projects/', ProjectsDetail.as_view(), name='projects-api'),
     path('api/projects/<int:project_id>', ProjectDetail.as_view(), name='project-api'),
     path('api/projects/<int:project_id>/stats/', ProjectStatsAPI.as_view(), name='stats-api'),
     path('api/projects/<int:project_id>/runmodel/', RunModelAPI.as_view(), name='runmodel-api'),
