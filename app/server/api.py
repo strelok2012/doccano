@@ -537,20 +537,26 @@ class DocumentExplainAPI(generics.RetrieveUpdateDestroyAPIView):
                     row = class_weights.loc[w_clean]
                     # weight = row['weight']
                     weight = row['importance']
-                    label_id = row['class']
-                    label_bg = labels[label_id]['background_color']
-                    label_text_color = labels[label_id]['text_color']
-                    label_title = labels[label_id]['text']
-                    if weight > 0.2:
-                        text.append(format_str.format(
-                            w=w,
-                            bg_color=label_bg,
-                            text_color=label_text_color,
-                            title=label_title,
-                            weight=weight
-                        ))
-                    else:
-                        text.append(w)
+
+                    try:
+                        label_id = int(row['class'])
+                        label_bg = labels[label_id]['background_color']
+                        label_text_color = labels[label_id]['text_color']
+                        label_title = labels[label_id]['text']
+
+                        if weight > 0.2:
+                            text.append(format_str.format(
+                                                        w = w,
+                                                        bg_color = label_bg,
+                                                        text_color = label_text_color,
+                                                        title = label_title,
+                                                        weight = weight
+                                                                                                                                                                                                                                                             +                               ))
+                        else:
+                            text.append(w)
+                    except Exception as e:
+                            text.append(w)
+
                 else:
                     text.append(w)
 

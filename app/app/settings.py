@@ -45,7 +45,7 @@ if os.environ.get('DEBUG') == 'False':
 # Application definition
 
 INSTALLED_APPS = [
-    'whitenoise.runserver_nostatic',
+    # 'whitenoise.runserver_nostatic',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -63,7 +63,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'djdev_panel.middleware.DebugMiddleware',  # <--- this guy
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    # 'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -151,8 +151,8 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     },
 }
-# DATABASES['default'] = DATABASES['posgres']
-DATABASES['default'] = DATABASES['posgres_local']
+DATABASES['default'] = DATABASES['posgres']
+# DATABASES['default'] = DATABASES['posgres_local']
 
 if "test" in sys.argv:
     DATABASES = {    

@@ -481,8 +481,6 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
         import_format = request.POST['format']
         try:
             if (request.POST['url']):
-                # r = requests.get(request.POST['url'])
-                # file = BytesIO(r.content)
                 s3 = s3fs.S3FileSystem(anon=False)
                 file = s3.open(request.POST['url'], 'rb')
                 import_format = import_format.replace('_url', '')

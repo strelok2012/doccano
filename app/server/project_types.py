@@ -6,7 +6,7 @@ project_types = {
     'DocumentClassification': {
         'title': 'document classification',
         'type': 'DocumentClassification',
-        'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
+        # 'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
         'template_html': 'annotation/document_classification.html',
         'document_serializer': '',
         'annotations_serializer': '',
@@ -16,7 +16,7 @@ project_types = {
     'SequenceLabeling': {
         'title': 'sequence labeling',
         'type': 'SequenceLabeling',
-        'image': staticfiles_storage.url('images/cat-3449999_640.jpg'),
+        # 'image': staticfiles_storage.url('images/cat-3449999_640.jpg'),
         'template_html': 'annotation/sequence_labeling.html',
         'document_serializer': '',
         'annotations_serializer': '',
@@ -25,7 +25,7 @@ project_types = {
     'Seq2seq': {
         'title': 'sequence to sequence',
         'type': 'Seq2seq',
-        'image': staticfiles_storage.url('images/tiger-768574_640.jpg'),
+        # 'image': staticfiles_storage.url('images/tiger-768574_640.jpg'),
         'template_html': 'annotation/seq2seq.html',
         'document_serializer': '',
         'annotations_serializer': '',
@@ -34,7 +34,7 @@ project_types = {
     'ImageClassification': {
         'title': 'image classification',
         'type': 'DocumentClassification',
-        'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
+        # 'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
         'template_html': 'annotation/image_classification.html',
         'document_serializer': '',
         'annotations_serializer': '',
@@ -44,7 +44,7 @@ project_types = {
     'ImageCaptioning': {
         'title': 'image captioning',
         'type': 'Seq2seq',
-        'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
+        # 'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
         'template_html': 'annotation/image_captioning.html',
         'document_serializer': '',
         'annotations_serializer': '',

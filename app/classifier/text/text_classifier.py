@@ -64,9 +64,14 @@ class TextClassifier(BaseClassifier):
         self.processing_pipeline = TextPipeline(pipeline)
 
     def run_on_file(self, input_filename, output_filename, user_id, project_id, label_id=None,
+                    input_data=None,
                     pipeline=None, bootstrap_iterations=0, bootstrap_threshold=0.9, run_on_entire_dataset=False):
         print('Reading input file...')
-        df = pd.read_csv(input_filename, encoding='latin1')
+        if input_filename[-8:]=='.parquet':
+            df = pd.read_parquet(input_filename)
+        else:
+            df = pd.read_csv(input_filename, encoding='latin1')
+
         if 'label_id' in df.columns:
             df['label'] = df['label_id']
         elif 'label' not in df.columns:
@@ -120,10 +125,11 @@ class TextClassifier(BaseClassifier):
             X = self.pre_process(df_cpy, fit=False)
             y = df['label_id']
 
-            print('Bootstrapping...')
-            for i in range(bootstrap_iterations):
-                print('bootstrap iteration ', i, '/', bootstrap_iterations, ' ', [x for x in zip(np.unique(y[~pd.isna(y)], return_counts=True))])
-                y = self.bootstrap(X, y=y, th=bootstrap_threshold)
+            if (bootstrap_iterations>0):
+                print('Bootstrapping...')
+                for i in range(bootstrap_iterations):
+                    print('bootstrap iteration ', i, '/', bootstrap_iterations, ' ', [x for x in zip(np.unique(y[~pd.isna(y)], return_counts=True))])
+                    y = self.bootstrap(X, y=y, th=bootstrap_threshold)
 
             prediction_df = self.get_prediction_df(X, y=df['label_id'])
 
@@ -163,7 +169,20 @@ def run_model_on_file(input_filename, output_filename, user_id, project_id, labe
 
 
 if __name__ == '__main__':
-    from app.settings import ML_FOLDER, INPUT_FILE, OUTPUT_FILE
+    # from app.settings import ML_FOLDER, INPUT_FILE, OUTPUT_FILE
+    ML_FOLDER = r'c:\temp\doccano\\'
+
+    if False:
+        INPUT_FILE = ML_FOLDER + 'doccano_project_12_emails_training_-_reject_-_13_companies_export.parquet'
+        df = pd.read_parquet(INPUT_FILE)
+        df = df.rename({'document_text': 'text'}, axis=1)
+        cols = ['document_id', 'user_id', 'label_id', 'text']
+        df = df[cols]
+        df.to_parquet( ML_FOLDER + 'doccano_project_12_emails_training_-_reject_-_13_companies_export_short.parquet' )
+        exit()
+
+    INPUT_FILE = ML_FOLDER + 'doccano_project_12_emails_training_-_reject_-_13_companies_export_short.parquet'
+    OUTPUT_FILE = ML_FOLDER + 'output.csv'
 
     run_model_on_file(
         # input_filename='../../ml_models/ml_input.csv',
@@ -173,4 +192,4 @@ if __name__ == '__main__':
         project_id=9999,
         user_id=2,
         label_id=None,
-        run_on_entire_dataset=False)
+        run_on_entire_dataset=True)
