@@ -551,7 +551,7 @@ class DocumentExplainAPI(generics.RetrieveUpdateDestroyAPIView):
                                                         text_color = label_text_color,
                                                         title = label_title,
                                                         weight = weight
-                                                                                                                                                                                                                                                             +                               ))
+                            ))
                         else:
                             text.append(w)
                     except Exception as e:
