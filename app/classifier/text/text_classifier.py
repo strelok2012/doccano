@@ -153,7 +153,7 @@ class TextClassifier(BaseClassifier):
 
                     # write to file only in last iteration
                     if i == bootstrap_iterations:
-                        chunk_prediction_df = self.get_prediction_df(X, y=df['label_id'])
+                        chunk_prediction_df = self.get_prediction_df(X, y=y)
 
                         chunk_prediction_df['document_id'] = df['document_id']
                         chunk_prediction_df['user_id'] = user_id
