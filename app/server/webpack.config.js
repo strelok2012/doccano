@@ -22,7 +22,8 @@ module.exports = {
         'users': './static/js/users.js',
         'user': './static/js/user.js',
         'user_info': './static/js/user_info.js',
-        'ml_model': './static/js/ml_model.js'
+        'ml_model': './static/js/ml_model.js',
+        'audio_annotation': './static/js/audio_annotation.js'
     },
     output: {
         path: __dirname + '/static/bundle',
@@ -37,6 +38,14 @@ module.exports = {
             {
                 test: /\.css$/,
                 use: ['style-loader', 'css-loader'],
+            },
+            {
+                test: /\.woff2?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+                use: 'url-loader?limit=10000',
+            },
+            {
+                test: /\.(ttf|eot|svg)(\?[\s\S]+)?$/,
+                use: 'file-loader',
             }
         ]
     },

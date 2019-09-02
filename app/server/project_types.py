@@ -49,6 +49,16 @@ project_types = {
         'document_serializer': '',
         'annotations_serializer': '',
     },
+
+    'AudioLabeling': {
+        'title': 'audio labeling (Gecko test)',
+        'type': 'SequenceLabeling',
+        # 'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
+        'template_html': 'annotation/audio_labeling.html',
+        'document_serializer': '',
+        'annotations_serializer': '',
+        # 'active_learning_function': imagenet_classifier_function
+    },
 }
 DOCUMENT_CLASSIFICATION = 'DocumentClassification'
 SEQUENCE_LABELING = 'SequenceLabeling'
