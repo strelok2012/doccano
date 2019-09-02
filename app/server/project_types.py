@@ -49,6 +49,17 @@ project_types = {
         'document_serializer': '',
         'annotations_serializer': '',
     },
+
+    'ConversationClassification': {
+        'title': 'conversation classification',
+        'type': 'DocumentClassification',
+        # 'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
+        'template_html': 'annotation/conversation_classification.html',
+        'document_serializer': '',
+        'annotations_serializer': '',
+        'active_learning_function': text_classifier_function
+    },
+
 }
 DOCUMENT_CLASSIFICATION = 'DocumentClassification'
 SEQUENCE_LABELING = 'SequenceLabeling'

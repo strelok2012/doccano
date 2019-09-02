@@ -595,6 +595,14 @@ const annotationMixin = {
       return null;
     },
 
+    metadataObj() {
+      if (this.currentDoc && this.currentDoc.metadata && this.currentDoc.metadata!='{}') {
+        const json = JSON.parse(this.currentDoc.metadata)
+        return json;
+      }
+      return null;
+    },
+
     docText() {
       let text = this.docs[this.pageNumber].text;
 
