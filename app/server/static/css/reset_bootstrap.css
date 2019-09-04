@@ -4,9 +4,3 @@ body {
     font-weight: 400;
     line-height: 1.5;
 }
-
-.navbar {
-    min-height: 3.25rem;
-    position: relative;
-    margin-bottom: initial;
-}
