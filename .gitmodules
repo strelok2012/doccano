@@ -1,3 +1,0 @@
-[submodule "app/server/static/gecko"]
-	path = app/server/static/gecko
-	url = https://github.com/gong-io/gecko
