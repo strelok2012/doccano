@@ -1,5 +1,6 @@
 import json
 from django.core.exceptions import ValidationError
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 from django.db.models import Q
 from django.urls import reverse
@@ -262,6 +263,8 @@ class Document(models.Model):
             return self.seq_annotations.all()
         elif self.project.is_type_of(Project.Seq2seq):
             return self.seq2seq_annotations.all()
+        elif self.project.is_type_of(Project.AudioLabeling):
+            return self.audio_labeling_annotations.all()
 
     def to_csv(self):
         return self.make_dataset()
@@ -404,3 +407,13 @@ class Seq2seqAnnotation(Annotation):
 
     class Meta:
         unique_together = ('document', 'user', 'text')
+
+class AudioLabelingAnnotation(Annotation):
+    document = models.ForeignKey(Document, related_name='audio_labeling_annotations', on_delete=models.CASCADE)
+    done = models.BooleanField(default=False)
+    file_name = models.TextField(blank=True)
+    file_path = models.TextField(blank=True)
+    data = JSONField()
+
+    class Meta:
+        unique_together = ('document', 'user')

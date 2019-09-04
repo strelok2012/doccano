@@ -63,3 +63,4 @@ project_types = {
 DOCUMENT_CLASSIFICATION = 'DocumentClassification'
 SEQUENCE_LABELING = 'SequenceLabeling'
 Seq2seq = 'Seq2seq'
+AudioLabeling = 'AudioLabeling'

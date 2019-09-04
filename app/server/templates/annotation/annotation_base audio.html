@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load static %}
+{% block header %}
+<link rel="stylesheet" href="{% static 'css/annotation.css' %}">
+<script src="https://unpkg.com/marked@0.3.6/lib/marked.js"></script>
+<script src="https://unpkg.com/lodash@4.16.0/lodash.js"></script>
+{% endblock %}
+{% block navigation %}
+{% if user.is_superuser %}
+<a class="navbar-item" href="{% url 'stats' view.kwargs.project_id %}">
+  <span class="icon">
+    <i class="fas fa-edit"></i>
+  </span>
+  <b>Edit</b>
+</a>
+<a class="navbar-item" @click="runModel" title="Train a Machine Learning model to classify documents based on the documents that were already annotated">
+  <span class="icon">
+    <i class="fas fa-robot"></i>
+  </span>
+  <b>Run Model</b>
+</a>
+
+<!-- Modal card for creating project. -->
+<div class="modal" :class="{ 'is-active': showRunModel }">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">Run Model Result</p>
+      <button class="delete" aria-label="close" @click="showRunModel=!showRunModel"></button>
+    </header>
+    <form method="post">
+      {% csrf_token %}
+      <section class="modal-card-body" v-if="resultSplitted.length" v-html="resultSplitted">
+      </section>
+    </form>
+  </div>
+</div>
+
+{% endif %}
+<div class="navbar-item">
+  {{ docs_count }} documents
+</div>
+{% endblock %}
+{% block content %}
+<div class="columns" id="mail-app" v-cloak>
+  <div class="column is-12 message hero is-fullheight" id="message-pane">
+
+    <!-- Modal card for creating project. -->
+    <div class="modal" :class="{ 'is-active': isActive }">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">Annotation Guidelines</p>
+            <button class="delete" aria-label="close" @click="isActive=!isActive"></button>
+          </header>
+          <section class="modal-card-body modal-card-body-footer content"
+                   style="line-height:150%"
+                   v-html="compiledMarkdown"></section>
+        </div>
+      </div>
+
+    <div class="columns is-multiline is-gapless is-mobile is-vertical-center">
+      <div class="column is-3">
+        <progress class="progress is-inline-block" v-bind:class="progressColor" v-bind:value="achievement" max="100">30%</progress>
+      </div>
+      <div class="column is-4">
+        <span class="ml10" title="documents annotated"><strong>[[ total - remaining ]]</strong></span>/<span title="total documents">[[ total ]]</span>
+      </div>
+      <div class="column is-4">
+        <div class="field" title="Highlight words and phrases that contribute the most to the prediction of the machine">
+          <input id="switchExample" type="checkbox" name="switchExample" class="switch is-success" v-model="explainMode" checked="checked">
+          <label for="switchExample">Explain mode</label>
+        </div>
+      </div>
+      <div class="column is-1 has-text-right">
+        <a class="button" @click="isActive=!isActive" title="Annotation guidelines">
+          <span class="icon">
+            <i class="fas fa-book"></i>
+          </span>
+        </a>
+      </div>
+    </div>
+
+    {% block annotation-area %} {% endblock %}
+
+    <div class="level mt30">
+      <a class="button level-left"
+         title="Move to the previous record. You can also use the left arrow key as a keyboard shortcut"
+         v-on:click="prevPage"
+         v-shortkey.once="{prev1: ['ctrl', 'p'], prev2: ['arrowup'], prev3: ['arrowleft']}"
+         @shortkey="prevPage">
+        <span class="icon">
+          <i class="fas fa-chevron-left"></i>
+        </span>
+        <span>Prev</span>
+      </a>
+
+      <a class="button level-right"
+         title="Move to the next record. You can also use the right arrow key as a keyboard shortcut"
+         v-on:click="nextPage"
+         v-shortkey.once="{next1: ['ctrl', 'n'], next2: ['arrowdown'], next3: ['arrowright']}"
+         @shortkey="nextPage">
+        <span>Next</span>
+        <span class="icon">
+          <i class="fas fa-chevron-right"></i>
+        </span>
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

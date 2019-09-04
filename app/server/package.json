@@ -13,12 +13,12 @@
     "chart.js": "^2.7.2",
     "custom-event-polyfill": "^1.0.7",
     "element-matches": "^0.1.2",
+    "gecko": "git+https://git@github.com/strelok2012/gecko.git",
     "vue": "^2.6.10",
     "vue-chartjs": "^3.4.0",
     "vue-good-table": "^2.16.4",
     "vue-loader": "^15.7.0",
-    "vue-shortkey": "^3.1.6",
-    "gecko": "git+https://git@github.com/strelok2012/gecko.git"
+    "vue-shortkey": "^3.1.6"
   },
   "devDependencies": {
     "css-loader": "^2.1.1",

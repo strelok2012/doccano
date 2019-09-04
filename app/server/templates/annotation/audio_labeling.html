@@ -1,8 +1,18 @@
-{% extends "annotation/annotation_base.html" %}
+{% extends "annotation/annotation_base audio.html" %}
 {% load static %}
 {% block annotation-area %}
 {% verbatim %}
-<div ng-app="speechRecognition" ng-controller="MainController as ctrl" ng-init="ctrl.loadApp({mode: 'server', audioUrl: '%FROM_DOCCANO%', ctmUrl: '%FROM_DOCCANO%'})" ng-cloak>
+<div ng-app="speechRecognition" ng-controller="MainController as ctrl" ng-init="ctrl.loadApp({mode: 'server',
+    audio: {
+        url: 'http://doccano-test.s3.ap-northeast-2.amazonaws.com/audio.wav',
+        fileName: 'audio.waw'
+    },
+    ctms: [
+        { 
+            url: 'http://doccano-test.s3.ap-northeast-2.amazonaws.com/new.ctm',
+            fileName: 'new.ctm'
+        }
+    ]})" ng-cloak>
     <nav class="navbar navbar-inverse" style="margin-bottom: 0">
         <div class="container">
             <div class="navbar-header">
