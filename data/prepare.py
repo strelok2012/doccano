@@ -1,6 +1,7 @@
 import csv
 import json
- 
+import pandas
+
 def csv_reader(file_obj):
     """
     Read a csv file
