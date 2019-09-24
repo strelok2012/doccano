@@ -18,6 +18,7 @@
 </a>
 
 <a class="navbar-item">
+  {{ project.name }} -
   {{ docs_count }} documents
 </a>
 {% endblock %}
@@ -78,6 +79,12 @@
             <i class="fas fa-signal"></i>
           </span>
           <span class="name">Statistics</span>
+        </a>
+        <a href="{% url 'ml_model' view.kwargs.project_id %}" class="item">
+          <span class="icon">
+            <i class="fas fa-robot"></i>
+          </span>
+          <span class="name">Machine Learning</span>
         </a>
         <a href="{% url 'settings' view.kwargs.project_id %}" class="item">
           <span class="icon">

@@ -55,6 +55,9 @@
         </p>
         <pre class="text" style="font-size:14px;line-height:1.7em">[[ metadataObj.full_transcript ]]</pre>
 
+
+        <iframe :href="metadataObj.link"></iframe>
+
         <!--<pre class="metadata" style="color: #aaa; font-size:0.7em; margin-top:2em; line-height: 1.2em">[[ docs[pageNumber] ]]</pre>-->
     </div>
 
@@ -64,6 +67,7 @@
 
   </div>
 </div>
+
 {% if user.is_superuser %}
   <div class="card" style="margin-top: 2rem;" ref="labelersCard" id="labelersCard" v-show="labelers.length">
     <header class="card-footer">
@@ -110,4 +114,15 @@
 {% endblock %}
 {% block footer %}
     <script src="{% static 'bundle/document_classification.js' %}"></script>
+
+    <script>
+        var element = document.getElementById('audioPlayer');
+
+        //first make sure the audio player is playing
+        element.play();
+
+        //second seek to the specific time you're looking for
+        element.currentTime = 226;
+    </script>
+
 {% endblock %}

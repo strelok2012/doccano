@@ -46,8 +46,7 @@ const vm = new Vue({
       },
       {
         label: 'Label',
-        field: 'label',
-        type: 'number'
+        field: 'label'
       },
     ]
   },

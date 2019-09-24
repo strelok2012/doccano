@@ -37,7 +37,7 @@ def base_processing(X, col=None, **params):
         new_col = 'processed_text'
 
     if new_col not in X.columns:
-        X[new_col] = None
+        X.loc[:, new_col] = None
 
     X.loc[:, new_col] = X[col].apply(process_text)
     transform_params = {'col': col, 'new_col': new_col}

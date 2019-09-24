@@ -7,6 +7,9 @@ from classifier.model import BaseClassifier
 from classifier.text.text_pipeline import TextPipeline
 from sklearn.linear_model import LogisticRegression
 import logging
+import matplotlib.pyplot as plt
+
+from classifier.analyze_model import plot_precision_recall_curve, plot_roc_curve, plot_confidence_performance
 
 logger = logging.getLogger('text classifier')
 ngram_range = (1, 1)
@@ -66,34 +69,45 @@ class TextClassifier(BaseClassifier):
 
     def run_on_file(self, input_filename, output_filename, user_id, project_id, label_id=None,
                     pipeline=None, bootstrap_iterations=0, bootstrap_threshold=0.9, run_on_entire_dataset=False):
+        input_filename = os.path.abspath(input_filename)
+        output_filename = os.path.abspath(output_filename)
+        ML_FOLDER = os.path.dirname(input_filename)
+
+        print('Running text classification model on input file {}. Results will be saved to {}...'.format(input_filename, output_filename))
         print('Reading input file...')
         if input_filename[-8:]=='.parquet':
             df = pd.read_parquet(input_filename)
         else:
             df = pd.read_csv(input_filename, encoding='latin1')
 
+        label_field = 'label_id'
         if 'label_id' in df.columns:
             df['label'] = df['label_id']
         elif 'label' not in df.columns:
             raise ValueError("no columns 'label' or 'label_id' exist in input file")
 
         df = df[~pd.isnull(df['text'])]
-        print('Pre-processing text and extracting features...')
-        self.set_preprocessor(pipeline)
+
+        df.loc[ df[label_field]==' ', label_field] = None
 
         if label_id:
-            df_labeled = df[df['label_id'] == label_id]
-            df_labeled = pd.concat([df_labeled, df[df['label_id'] != label_id].sample(df_labeled.shape[0])])
-            df_labeled.loc[df_labeled['label_id'] != label_id, 'label_id'] = 0
+            df_labeled = df[df[label_field] == label_id]
+            df_labeled = pd.concat([df_labeled, df[df[label_field] != label_id].sample(df_labeled.shape[0])])
+            df_labeled.loc[df_labeled[label_field] != label_id, label_field] = 0
+            df_labeled = df_labeled[(~pd.isnull(df_labeled[label_field])) & (df_labeled[label_field] != ' ')]
         else:
-            df_labeled = df[~pd.isnull(df['label_id'])]
+            df_labeled = df[ (~pd.isnull(df[label_field])) ]
 
+        print('Pre-processing text and extracting features...')
+        self.set_preprocessor(pipeline)
         X = self.pre_process(df_labeled, fit=True)
 
-        if 'label_id' not in df_labeled.columns:
-            raise RuntimeError("column 'label_id' not found")
+        if label_field not in df_labeled.columns:
+            raise RuntimeError("column '{}' not found".format(label_field))
         else:
-            y = df_labeled['label_id'].values
+            y = df_labeled[label_field].values
+
+
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
 
@@ -109,9 +123,9 @@ class TextClassifier(BaseClassifier):
         result = result + '\nPerformance on test set: \n' + evaluation_text
 
         df_gold_labels = df[ df['user_id']=='gold_label' ]
-        X_gold_labels = self.pre_process(df_gold_labels, fit=False)
-        y_gold_labels = df_gold_labels['label_id'].values
+        y_gold_labels = df_gold_labels[label_field].values
         if len(y_gold_labels)>0:
+            X_gold_labels = self.pre_process(df_gold_labels, fit=False)
             print('Performance on gold labels set:')
             _, evaluation_text = self.evaluate(X_gold_labels, y_gold_labels)
             result = result + '\nPerformance on gold labels set: \n' + evaluation_text
@@ -121,12 +135,13 @@ class TextClassifier(BaseClassifier):
         if run_on_entire_dataset:
             print('Running the model on the entire dataset...')
 
-            output_df = pd.DataFrame(columns=('document_id', 'label_id', 'user_id', 'prob'))
-            output_df.to_csv(output_filename, index=False, header=True, index_label=False)
+            columns = ['document_id', label_field, 'user_id', 'prob']
+            # output_df = pd.DataFrame(columns=columns)
+            # output_df.to_csv(output_filename, index=False, header=True, index_label=False)
 
             if bootstrap_iterations > 0:
                 print('Bootstrapping...')
-            y_aug = df['label_id'].copy()
+            y_aug = df[label_field].copy()
             for i in range(bootstrap_iterations+1):
                 # fitting on labeled examples
                 has_label = ~pd.isna(y_aug)
@@ -139,34 +154,93 @@ class TextClassifier(BaseClassifier):
                 for chunk_start in tqdm(range(0, n_samples, chunk_size)):
                     chunk_end = min(n_samples, chunk_start + chunk_size)
                     chunk_df = df.iloc[chunk_start:chunk_end]
-                    chunk_df['label_id'] = None
-                    y = df.iloc[chunk_start:chunk_end]['label_id']
-                    X = self.pre_process(chunk_df, fit=False)
+                    chunk_df.loc[:, label_field] = None
+                    y_chunk = df.iloc[chunk_start:chunk_end][label_field]
+                    X_chunk = self.pre_process(chunk_df, fit=False)
 
                     if i < bootstrap_iterations:
                         print('bootstrap iteration ', i, '/', bootstrap_iterations, ' ',
                               [x for x in zip(np.unique(y_aug[has_label], return_counts=True))])
 
                         # no need to re-fit the model, only predict
-                        y_chunk_aug = self.bootstrap(X, y=y, th=bootstrap_threshold, fit=False)
+                        y_chunk_aug = self.bootstrap(X_chunk, y=y_chunk, th=bootstrap_threshold, fit=False)
                         y_aug.iloc[chunk_start:chunk_end] = y_chunk_aug
 
                     # write to file only in last iteration
                     if i == bootstrap_iterations:
-                        chunk_prediction_df = self.get_prediction_df(X, y=y)
+                        chunk_prediction_df = self.get_prediction_df(X_chunk, y=y_chunk)
 
                         chunk_prediction_df['document_id'] = df['document_id']
                         chunk_prediction_df['user_id'] = user_id
                         chunk_prediction_df = chunk_prediction_df.rename({'confidence': 'prob'}, axis=1)
-                        chunk_prediction_df['label_id'] = chunk_prediction_df['prediction']
-                        chunk_prediction_df[['document_id', 'label_id', 'user_id', 'prob']].to_csv(output_filename, mode="a", index=False, header=False)
+                        chunk_prediction_df[label_field] = chunk_prediction_df['prediction']
+                        chunk_prediction_df[columns].to_csv(output_filename, index=False, header=True)
 
+        print('Saving model weights to file...')
         class_weights = self.important_features
-        class_weights_filename = os.path.dirname(input_filename)+'/ml_logistic_regression_weights_{project_id}.csv'.format(project_id=project_id)
+        class_weights_filename = ML_FOLDER+'/ml_logistic_regression_weights_{project_id}.csv'.format(project_id=project_id)
         class_weights.to_csv(class_weights_filename, header=True, index=False)
 
-        model_save_filename = os.path.dirname(input_filename)+'/ml_model_{project_id}.pickle'.format(project_id=project_id)
+        print('Saving model to a pickle file...')
+        model_save_filename = ML_FOLDER+'/ml_model_{project_id}.pickle'.format(project_id=project_id)
         self.save(model_save_filename)
+
+        print('Saving model results to a text file...')
+        ml_model_results_filename = os.path.join(ML_FOLDER, 'ml_model_results_{}.txt'.format(project_id))
+        with open(ml_model_results_filename, 'wt') as f:
+            f.write(result)
+
+        y_test_pred = self.predict(X_test)
+        y_test_pred_proba = self.predict_proba(X_test)
+
+        # Confusion matrix
+        print('Generating confusion matrix...')
+        from classifier.confusion_matrix import plot_confusion_matrix
+        fig = plot_confusion_matrix(y_test, y_test_pred, classes=None, normalize=True, title='Normalized confusion matrix - test')
+        fig.savefig('staticfiles/images/models/confusion_matrix_test_{}.png'.format(project_id))
+        plt.clf()
+
+        fig = plot_confusion_matrix(y_train, self.predict(X_train), classes=None, normalize=True, title='Normalized confusion matrix - train')
+        fig.savefig('staticfiles/images/models/confusion_matrix_train_{}.png'.format(project_id))
+        plt.clf()
+
+        # Precision-recall curve
+        print('Generating the Precision-Recall graph...')
+        try:
+            fig = plot_precision_recall_curve(y_test_pred_proba, y_test)
+            fig.savefig('staticfiles/images/models/precision_recall_curve_{}.png'.format(project_id))
+            plt.clf()
+        except ValueError as e:
+            print(e)
+
+        # ROC curve
+        print('Generating ROC curve...')
+        try:
+            fig = plot_roc_curve(y_test_pred_proba, y_test)
+            fig.savefig('staticfiles/images/models/roc_curve_{}.png'.format(project_id))
+            plt.clf()
+        except ValueError as e:
+            print(e)
+
+        # Confidence-accuracy graph
+        print('Generating the Confidence-Accuracy graph...')
+        try:
+            fig = plot_confidence_performance(y_test_pred, y_test_pred_proba, y_test)
+            fig.savefig('staticfiles/images/models/confidence_accuracy_graph_{}.png'.format(project_id))
+            plt.clf()
+        except ValueError as e:
+            print(e)
+
+        # Generating learning curve
+        print('Generating the learning curve...')
+        from classifier.learning_curve import plot_learning_curve_cv
+        fig = plot_learning_curve_cv(X, y, estimator=self._model)
+        fig.savefig('staticfiles/images/models/learning_curve_{}.png'.format(project_id))
+        plt.clf()
+
+
+        # Word cloud on high confidence
+
 
         print('Done running the model!')
         return result
@@ -174,8 +248,7 @@ class TextClassifier(BaseClassifier):
 def run_model_on_file(input_filename, output_filename, user_id, project_id, label_id=None, method='bow', run_on_entire_dataset=False):
     # rf = RandomForestClassifier(verbose=True, class_weight='balanced')
     # lr = LogisticRegression(verbose=False, class_weight='balanced', random_state=0, penalty='l2', C=1)
-    lr = LogisticRegression(verbose=False, class_weight='balanced', random_state=0, penalty='l1',
-                            multi_class='ovr')
+    lr = LogisticRegression(verbose=False, class_weight='balanced', random_state=0, penalty='l1', solver='liblinear', multi_class='ovr')
     clf = TextClassifier(model=lr)
     # pipeline functions are applied sequentially by order of appearance
     pipeline = [('base processing', {'col': 'text', 'new_col': 'processed_text'}),
@@ -191,7 +264,7 @@ def run_model_on_file(input_filename, output_filename, user_id, project_id, labe
 
 if __name__ == '__main__':
     # from app.settings import ML_FOLDER, INPUT_FILE, OUTPUT_FILE
-    ML_FOLDER = r'c:\temp\doccano\\'
+    ML_FOLDER = r'C:\develop\code\doccano\app\ml_models\\'
 
     if False:
         INPUT_FILE = ML_FOLDER + 'doccano_project_12_emails_training_-_reject_-_13_companies_export.parquet'
@@ -202,7 +275,8 @@ if __name__ == '__main__':
         df.to_parquet( ML_FOLDER + 'doccano_project_12_emails_training_-_reject_-_13_companies_export_short.parquet' )
         exit()
 
-    INPUT_FILE = ML_FOLDER + 'doccano_project_12_emails_training_-_reject_-_13_companies_export_short.parquet'
+    # INPUT_FILE = ML_FOLDER + 'doccano_project_12_emails_training_-_reject_-_13_companies_export_short.parquet'
+    INPUT_FILE = ML_FOLDER + 'ml_input.csv'
     OUTPUT_FILE = ML_FOLDER + 'output.csv'
 
     run_model_on_file(
@@ -214,3 +288,4 @@ if __name__ == '__main__':
         user_id=2,
         label_id=None,
         run_on_entire_dataset=True)
+

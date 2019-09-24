@@ -102,8 +102,10 @@ class Project(models.Model):
         return docs
 
     def get_docs_count(self):
-        docs = self.documents.all()
-        return len(docs)
+        return self.documents.count()
+
+    def get_project_name(self):
+        return self.name
 
     def get_document_serializer(self):
         from .serializers import ClassificationDocumentSerializer

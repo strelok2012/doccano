@@ -1,3 +1,4 @@
+from django.core.cache import cache
 import csv
 import os
 import operator
@@ -54,6 +55,7 @@ def get_labels_admin(project_id):
             MAX(server_documentannotation.created_date_time) AS last_annotation_date,
             substr(server_document.text, 0, 60) AS document_text,
             server_documentgoldannotation.label_id as ground_truth,
+            server_documentmlmannotation.label_id as model_label_id,
             server_documentmlmannotation.prob as model_confidence
         FROM server_documentannotation
         LEFT JOIN server_document ON server_document.id = server_documentannotation.document_id
@@ -65,15 +67,15 @@ def get_labels_admin(project_id):
           server_documentannotation.label_id, 
           server_document.text, 
           server_documentgoldannotation.label_id, 
-          server_documentmlmannotation.prob
-        ORDER BY  server_documentannotation.document_id ASC,
-          num_labelers DESC 
+          server_documentmlmannotation.prob,
+          server_documentmlmannotation.label_id
+        ORDER BY  num_labelers DESC, server_documentmlmannotation.prob ASC 
           '''.format(project_id=project_id)
 
     cursor = connection.cursor()
     cursor.execute(query)
     df = pd.DataFrame(cursor.fetchall(), columns=[
-        'document_id', 'label_id', 'num_labelers', 'last_annotation_date', 'snippet', 'ground_truth', 'model_confidence'
+        'document_id', 'label_id', 'num_labelers', 'last_annotation_date', 'snippet', 'ground_truth', 'model_label', 'model_confidence'
     ])
     z = df.sort_values(['document_id', 'num_labelers'], ascending=[True, False]) \
         .groupby(['document_id']) \
@@ -88,10 +90,13 @@ def get_labels_admin(project_id):
         ],
         'snippet': [('snippet', lambda x: x.iloc[0])],
         'ground_truth': [('ground_truth', lambda x: x.iloc[0])],
-        'model_confidence': [('model_confidence', lambda x: x.iloc[0])],
+        'model_label': [('model_label', lambda x: x.iloc[0] if ~pd.isna(x.iloc[0]) else '')],
+        'model_confidence': [('model_confidence', lambda x: x.iloc[0] if ~pd.isna(x.iloc[0]) else '')],
     })
     z.columns = [c[1] for c in z.columns]
     z = z.reset_index()
+    z['model_confidence'] = z['model_confidence'].fillna(0)
+    z['model_label'] = z['model_label'].fillna(-1)
     z['ground_truth'] = z['ground_truth'].fillna(-1)
     return z
 
@@ -323,32 +328,43 @@ class RunModelAPI(APIView):
             server_document.id,
             server_document.text,
             server_documentannotation.user_id,
-            server_documentannotation.label_id
+            -- server_documentannotation.label_id
+            CONCAT(server_documentannotation.label_id, ' ', sl.text) AS label_id
             FROM
             server_document
             LEFT JOIN server_documentannotation ON server_documentannotation.document_id = server_document.id 
               -- AND server_documentannotation.user_id = {user_id}
+            LEFT JOIN server_label sl on server_documentannotation.label_id = sl.id
             WHERE server_document.project_id = {project_id}'''.format(user_id=request.user.id, project_id=project_id)
+
 
         doc_annotations_gold_query = '''SELECT
             server_document.id,
             server_document.text,
             'gold_label' as user_id,
-            server_documentgoldannotation.label_id
+            -- server_documentgoldannotation.label_id
+            CONCAT(server_documentgoldannotation.label_id, ' ', sl.text) AS label_id
             FROM
             server_documentgoldannotation
             LEFT JOIN server_document ON server_documentgoldannotation.document_id = server_document.id
+            LEFT JOIN server_label sl on server_documentgoldannotation.label_id = sl.id
             WHERE server_document.project_id = {project_id}
             '''.format(project_id=project_id)
 
         if not os.path.isdir(ML_FOLDER):
             os.makedirs(ML_FOLDER)
 
-        cursor.execute(doc_annotations_gold_query)
-        gold_annotations = cursor.fetchall()
+        # print(INPUT_FILE)
+        # print(os.path.dirname(INPUT_FILE))
+
+        print('Getting user annotations data from DB...')
         cursor.execute(doc_annotations_query)
         user_annotations = cursor.fetchall()
+        print('Getting gold labels data from DB...')
+        cursor.execute(doc_annotations_gold_query)
+        gold_annotations = cursor.fetchall()
 
+        print('Merging data...')
         cols = ['document_id', 'text', 'user_id', 'label_id']
         df_gold_annotations = pd.DataFrame(gold_annotations, columns=cols).set_index('document_id')
         df_user_annotations = pd.DataFrame(user_annotations, columns=cols).set_index('document_id')
@@ -358,6 +374,7 @@ class RunModelAPI(APIView):
         df_gold_annotations = df_gold_annotations.reset_index()
         df = pd.concat([df_user_annotations[cols], df_gold_annotations])
 
+        print('Data labels count:')
         print( df.groupby('label_id')[['user_id', 'document_id']].count())
         df = df.drop_duplicates(['document_id', 'user_id'], keep='last')
         print( df.groupby('label_id')[['user_id', 'document_id']].count())
@@ -365,7 +382,10 @@ class RunModelAPI(APIView):
         # df.to_csv(os.path.join(ML_FOLDER, INPUT_FILE.replace('.csv', '_full.csv')), encoding='utf-8')
         df = df.drop_duplicates('document_id', keep='last')
         print( df.groupby('label_id')[['user_id', 'document_id']].count())
-        df.to_csv(INPUT_FILE, encoding='utf-8')
+
+        os.makedirs(os.path.dirname(INPUT_FILE), exist_ok=True)
+        df.to_csv(os.path.abspath(INPUT_FILE), encoding='utf-8')
+        print('Saved data frame to CSV file')
 
         # result = run_model_on_file(INPUT_FILE, OUTPUT_FILE, user_id=request.user.id, project_id=project_id)
         active_learning_function = Project.project_types[ p.project_type ]['active_learning_function']
@@ -377,25 +397,43 @@ class RunModelAPI(APIView):
             run_on_entire_dataset = (p.use_machine_model_sort or p.show_ml_model_prediction)
         )
 
-        if p.use_machine_model_sort or p.show_ml_model_prediction:
-            print('Saving annotations to DB...')
+        if True:
+            # if p.use_machine_model_sort or p.show_ml_model_prediction:
+            print('Applying model predictions to all documents in the DB...')
             try:
-                reader = csv.DictReader(open(os.path.join(ML_FOLDER, OUTPUT_FILE), 'r', encoding='utf-8'))
+                reader = csv.DictReader(open(OUTPUT_FILE, 'r', encoding='utf-8'))
                 DocumentMLMAnnotation.objects.all().delete()
 
                 batch_size = 1000
                 new_annotations = (DocumentMLMAnnotation(
                     document=Document.objects.get(pk=int(float(row['document_id']))),
-                    label=Label.objects.get(pk=int(float(row['label_id']))),
-                    prob=row['prob']
+                    label=Label.objects.get(pk=int(float(row['label_id'].split(' ')[0]))),
+                    prob=float(row['prob'])
                 ) for row in reader if row['document_id']!='')
 
+                import datetime
+                now = str(datetime.datetime.utcnow())
+                new_annotations = (
+                    (int(float(row['document_id'])), int(float(row['label_id'].split(' ')[0])), now, now, float(row['prob']))
+                    for row in reader
+                    if row['document_id'] != ''
+                )
+
+                # DocumentMLMAnnotation.objects.bulk_create(new_annotations)
+
+                cursor = connection.cursor()
                 while True:
                     print('processing batch...')
                     batch = list(islice(new_annotations, batch_size))
                     if not batch:
                         break
-                    DocumentMLMAnnotation.objects.bulk_create(batch, batch_size)
+                    # DocumentMLMAnnotation.objects.bulk_create(batch, ['document_id', 'label_id', 'prob'])
+                    query = """
+                    INSERT INTO server_documentmlmannotation (document_id, label_id, created_date_Time, updated_date_time, prob)
+                    VALUES {}
+                    """.format(','.join([str(x) for x in batch]))
+                    cursor.execute(query)
+
             except Exception as e:
                 print(e)
 
@@ -599,11 +637,6 @@ class ProjectsDetail(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProjectSerializer
     permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUser)
 
-    def get_queryset(self):
-        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
-        queryset = self.queryset.filter(project.id)
-        return queryset
-
 
 class LabelDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Label.objects.all()
@@ -669,22 +702,27 @@ class DocumentList(generics.ListCreateAPIView):
     permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUserAndWriteOnly)
 
     def get_serializer_class(self):
-        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        project = cache.get('project_{}'.format(self.kwargs['project_id']))
+        if project is None:
+            project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+            cache.set('project_{}'.format(self.kwargs['project_id']), project)
         self.serializer_class = project.get_document_serializer()
 
         return self.serializer_class
 
     def get_queryset(self):
-        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        project = cache.get('project_{}'.format(self.kwargs['project_id']))
+        if project is None:
+            project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+            cache.set('project_{}'.format(self.kwargs['project_id']), project)
         queryset = self.queryset
 
         if self.request.query_params.get('is_checked'):
             is_null = self.request.query_params.get('is_checked') == 'true'
-            print(int(is_null))
             queryset = project.get_documents(is_null=is_null, user=self.request.user.id).distinct()
 
         if (project.use_machine_model_sort):
-            queryset = queryset.order_by('doc_mlm_annotations__prob').filter(project=self.kwargs['project_id']).exclude(doc_mlm_annotations__prob__isnull=True)
+            queryset = queryset.order_by('doc_mlm_annotations__prob').filter(project=self.kwargs['project_id'])
         else:
             queryset = queryset.order_by('doc_annotations__prob').filter(project=self.kwargs['project_id'])
 
