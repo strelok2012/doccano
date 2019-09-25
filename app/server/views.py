@@ -36,7 +36,7 @@ from app import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from server.api import get_labels_admin
-from app.settings import ML_FOLDER
+from app.settings import ML_FOLDER, BASE_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -290,13 +290,13 @@ class MachineLearningModelView(SuperUserMixin, LoginRequiredMixin, TemplateView)
 
         context['model_results'] = model_results
         context['image_precision_recall_curve'] = get_img_data_from_file(
-            'staticfiles/images/models/precision_recall_curve_{}.png'.format(project_id))
+            BASE_DIR+'/staticfiles/images/models/precision_recall_curve_{}.png'.format(project_id))
         context['image_roc_curve'] = get_img_data_from_file(
-            'staticfiles/images/models/roc_curve_{}.png'.format(project_id))
+            BASE_DIR+'/staticfiles/images/models/roc_curve_{}.png'.format(project_id))
         context['image_confidence_accuracy_graph'] = get_img_data_from_file(
-            'staticfiles/images/models/confidence_accuracy_graph_{}.png'.format(project_id))
+            BASE_DIR+'/staticfiles/images/models/confidence_accuracy_graph_{}.png'.format(project_id))
         context['image_learning_curve'] = get_img_data_from_file(
-            'staticfiles/images/models/learning_curve_{}.png'.format(project_id))
+            BASE_DIR+'/staticfiles/images/models/learning_curve_{}.png'.format(project_id))
         return context
 
 

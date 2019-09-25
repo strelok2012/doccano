@@ -322,6 +322,18 @@ class RunModelAPI(APIView):
     def get(self, request, *args, **kwargs):
         project_id = self.kwargs['project_id']
         p = get_object_or_404(Project, pk=project_id)
+
+        labels_mapping = request.GET.get('labels_mapping')
+        if labels_mapping is not None:
+            print(labels_mapping)
+            labels_mapping = json.loads(labels_mapping)
+            if not isinstance(labels_mapping, dict):
+                print("Can't parse label mapping data. Ignoring mapping...")
+                labels_mapping = None
+        else:
+            labels_mapping = None
+        print(labels_mapping)
+
         cursor = connection.cursor()
 
         doc_annotations_query = '''SELECT
@@ -373,6 +385,13 @@ class RunModelAPI(APIView):
         df_user_annotations = df_user_annotations.reset_index()[cols]
         df_gold_annotations = df_gold_annotations.reset_index()
         df = pd.concat([df_user_annotations[cols], df_gold_annotations])
+
+        if labels_mapping is not None:
+            print('Applying data mapping...')
+            for k,v in labels_mapping.items():
+                df.loc[ df['label_id']==k, 'label_id'] = v
+
+        df.loc[(df['label_id'] == '') | (df['label_id'] == ' '), 'label_id'] = None
 
         print('Data labels count:')
         print( df.groupby('label_id')[['user_id', 'document_id']].count())
