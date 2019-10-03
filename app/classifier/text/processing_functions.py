@@ -3,7 +3,7 @@ import pandas as pd
 # import spacy
 from nltk.tokenize import WordPunctTokenizer
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import TfidfTransformer, TfidfVectorizer
 import re
 import logging
 
@@ -55,8 +55,10 @@ def get_bag_of_words(X, fit=True, col=None, vectorizer=None, **params):
         return X, None
 
     if fit:
-        vectorizer = CountVectorizer()
-        transformer = TfidfTransformer(smooth_idf=True)
+        if 'use_idf' in params:
+            vectorizer = TfidfVectorizer(smooth_idf=True)
+        else:
+            vectorizer = CountVectorizer()
 
         # if not specified, setting default tokenizer to nltk.WordPunctTokenizer
         if 'tokenizer' not in params:

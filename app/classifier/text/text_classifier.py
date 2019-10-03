@@ -13,6 +13,7 @@ from classifier.analyze_model import plot_precision_recall_curve, plot_roc_curve
 
 logger = logging.getLogger('text classifier')
 ngram_range = (1, 1)
+# ngram_range = (1, 2)
 
 class TextClassifier(BaseClassifier):
     @classmethod
@@ -108,8 +109,7 @@ class TextClassifier(BaseClassifier):
             y = df_labeled[label_field].values
 
 
-
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
         print('Training the model...')
         self.fit(X_train, y_train)
@@ -247,13 +247,13 @@ class TextClassifier(BaseClassifier):
 
 def run_model_on_file(input_filename, output_filename, user_id, project_id, label_id=None, method='bow', run_on_entire_dataset=False):
     # rf = RandomForestClassifier(verbose=True, class_weight='balanced')
-    # lr = LogisticRegression(verbose=False, class_weight='balanced', random_state=0, penalty='l2', C=1)
-    lr = LogisticRegression(verbose=False, class_weight='balanced', random_state=0, penalty='l1', solver='liblinear', multi_class='ovr')
-    clf = TextClassifier(model=lr)
+    model = LogisticRegression(verbose=False, class_weight='balanced', random_state=0, penalty='l1', solver='liblinear', multi_class='ovr')
+    clf = TextClassifier(model=model)
     # pipeline functions are applied sequentially by order of appearance
     pipeline = [('base processing', {'col': 'text', 'new_col': 'processed_text'}),
                 ('bag of words', {'col': 'processed_text',
-                                  'min_df': 1, 'max_df': 1., 'binary': True, 'ngram_range': ngram_range,
+                                  'use_idf': True, 'smooth_idf': True,
+                                  'min_df': 2, 'max_df': .9, 'binary': True, 'ngram_range': ngram_range,
                                   'stop_words': 'english', 'strip_accents': 'ascii', 'max_features': 5000}),
                 ('drop columns', {'drop_cols': ['label_id', 'text', 'processed_text']})]
 
@@ -287,5 +287,5 @@ if __name__ == '__main__':
         project_id=9999,
         user_id=2,
         label_id=None,
-        run_on_entire_dataset=True)
+        run_on_entire_dataset=False)
 

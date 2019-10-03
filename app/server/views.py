@@ -190,7 +190,6 @@ class UserInfoView(SuperUserMixin, LoginRequiredMixin, TemplateView):
             AND server_documentannotation.user_id = {user_id}'''.format(project_id=self.kwargs['project_id'], user_id=self.kwargs['user_id'])
         cursor.execute(annots_sql)
 
-
         annots_csv = 'user_id,created_date_time,updated_date_time\n'
         for row in cursor.fetchall():
             annots_csv += '%s,%s,%s\n' % (row[2], row[3], row[4])

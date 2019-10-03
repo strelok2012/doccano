@@ -577,31 +577,33 @@ class DocumentExplainAPI(generics.RetrieveUpdateDestroyAPIView):
     pagination_class = None
     permission_classes = (IsAuthenticated, IsProjectUser)
 
-    def get(self, request, *args, **kwargs):
-        d = get_object_or_404(Document, pk=self.kwargs['doc_id'])
-        self.project_id = self.kwargs['project_id']
-        doc_text_splited = d.text.split(' ')
+    def get_serializer_class(self):
+        return None
+
+    def get_data(self, document_id, project_id):
+        d = get_object_or_404(Document, pk=document_id)
+        doc_text_splited = d.text.replace(',','').replace('.','').replace('\n',' \n ').split(' ')
         format_str = '<span style="background-color:{bg_color}; color:{text_color}" title="Weight:{weight} for class {title}">{w}</span>'
 
         labels = Label.objects.all()
         labels = {row['id']: row for row in (labels.values())}
         text = []
-        class_weights = get_class_weights(self.project_id)
+        class_weights = get_class_weights(project_id)
         if class_weights is not None:
             for w in doc_text_splited:
-                w_clean = w.lower().replace(',','').replace('.','')
+                w_clean = w.lower()
                 if w_clean in class_weights.index:
                     row = class_weights.loc[w_clean]
                     # weight = row['weight']
                     weight = row['importance']
 
                     try:
-                        label_id = int(row['class'])
-                        label_bg = labels[label_id]['background_color']
-                        label_text_color = labels[label_id]['text_color']
-                        label_title = labels[label_id]['text']
-
                         if weight > 0.2:
+                            label_id = int(row['class'].split(' ')[0])
+                            label_bg = labels[label_id]['background_color']
+                            label_text_color = labels[label_id]['text_color']
+                            label_title = labels[label_id]['text']
+
                             text.append(format_str.format(
                                                         w = w,
                                                         bg_color = label_bg,
@@ -612,12 +614,18 @@ class DocumentExplainAPI(generics.RetrieveUpdateDestroyAPIView):
                         else:
                             text.append(w)
                     except Exception as e:
-                            text.append(w)
+                        print(e)
+                        text.append(w)
 
                 else:
                     text.append(w)
 
-        response = {'document': ' '.join(text)}
+        response = {'document': ' '.join(text), 'document_id': document_id, 'project_id': project_id}
+        return response
+
+    def get(self, request, *args, **kwargs):
+        response = self.get_data(project_id=self.kwargs['project_id'], document_id=self.kwargs['doc_id'])
+        self.project_id = self.kwargs['project_id']
         return Response(response)
 
 class DocumentLabelersAPI(generics.RetrieveUpdateDestroyAPIView):
