@@ -19,7 +19,7 @@
       <div class="card-content columns">
         <div class="column is-8">
             <div>
-              <textarea></textarea>
+              <textarea v-model="labelsMapping"></textarea>
               <a class="button is-primary" @click="runModel"
                     title="Train a Machine Learning model to classify documents based on the documents that were already annotated">
                     Train Machine Learning Model
