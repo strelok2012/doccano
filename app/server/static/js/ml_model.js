@@ -125,7 +125,7 @@ const vm = new Vue({
           this.classWeightsData.push({
             term: weightsData[i][0],
             weight: +weightsData[i][1],
-            label: +weightsData[i][2]
+            label: weightsData[i][2]
           })
         }
       }
