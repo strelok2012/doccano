@@ -48,7 +48,8 @@ const vm = new Vue({
         label: 'Label',
         field: 'label'
       },
-    ]
+    ],
+    labelsMapping: ''
   },
 
   components: {
@@ -63,7 +64,7 @@ const vm = new Vue({
           label: label,
           backgroundColor: '#00d1b2',
           data: data,
-        }],
+        }]
       };
       return res;
     },
@@ -72,12 +73,24 @@ const vm = new Vue({
           return;
         }
         this.modelProcessing = true;
+        let parsedMapping
+        try {
+          parsedMapping = JSON.parse(this.labelsMapping)
+        } catch (e) {
+          parsedMapping = null
+          bulmaToast.toast({
+            message: 'Not well-formed labels JSON mapping',
+            type: 'is-danger',
+            position: 'top-center'
+          });
+        }
         bulmaToast.toast({
           message: 'Processing...',
           type: 'is-info',
           position: 'top-center'
         });
-        axios.get(`${baseUrl}/api/projects/${projectId}/runmodel/`).then((r) => {
+        const url = parsedMapping ? `${baseUrl}/api/projects/${projectId}/runmodel/?labels_mapping=${this.labelsMapping}` : `${baseUrl}/api/projects/${projectId}/runmodel/`
+        axios.get(url).then((r) => {
           this.modelProcessing = false;
           this.showRunModel = true;
           bulmaToast.toast({
