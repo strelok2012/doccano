@@ -3,6 +3,8 @@ import HTTP from './http';
 
 import axios from 'axios';
 
+import * as bulmaToast from 'bulma-toast';
+
 axios.defaults.xsrfCookieName = 'csrftoken';
 axios.defaults.xsrfHeaderName = 'X-CSRFToken';
 const baseUrl = window.location.href.split('/').slice(0, 3).join('/');
@@ -29,6 +31,11 @@ const vm = new Vue({
   methods: {
       submit() {
           HTTP.patch('', this.userSettings).then((response) => {
+            bulmaToast.toast({
+              message: 'Successfully saved',
+              type: 'is-success',
+              position: 'top-center',
+            });
           })
       },
       setUserSettings(data) {

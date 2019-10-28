@@ -36,7 +36,7 @@ from app import settings
 from django.core.exceptions import ObjectDoesNotExist
 
 from server.api import get_labels_admin
-from app.settings import ML_FOLDER
+from app.settings import ML_FOLDER, BASE_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +77,7 @@ class ProjectView(LoginRequiredMixin, TemplateView):
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])
         context = super().get_context_data(**kwargs)
         context['docs_count'] = project.get_docs_count()
+        context['project_name'] = project.get_project_name()
         context['project'] = project
         return context
 
@@ -189,7 +190,6 @@ class UserInfoView(SuperUserMixin, LoginRequiredMixin, TemplateView):
             AND server_documentannotation.user_id = {user_id}'''.format(project_id=self.kwargs['project_id'], user_id=self.kwargs['user_id'])
         cursor.execute(annots_sql)
 
-
         annots_csv = 'user_id,created_date_time,updated_date_time\n'
         for row in cursor.fetchall():
             annots_csv += '%s,%s,%s\n' % (row[2], row[3], row[4])
@@ -252,28 +252,50 @@ class StatsView(SuperUserMixin, LoginRequiredMixin, TemplateView):
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])
         context = super().get_context_data(**kwargs)
         context['docs_count'] = project.get_docs_count()
+        context['project'] = project
         return context
 
 
 class MachineLearningModelView(SuperUserMixin, LoginRequiredMixin, TemplateView):
     template_name = 'admin/ml_model.html'
 
+
     def get_context_data(self, **kwargs):
         project_id = self.kwargs['project_id']
         # project = get_object_or_404(Project, pk=self.kwargs['project_id'])
         context = super().get_context_data(**kwargs)
+
+        def get_img_data_from_file(filename):
+            print(os.path.abspath(filename))
+            import base64
+            try:
+                with open(filename, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode()
+            except FileNotFoundError:
+                encoded_string = 'missing_graph'
+
+            return encoded_string
 
         try:
             ml_model_results_filename = os.path.join(ML_FOLDER, 'ml_model_results_{}.txt'.format(project_id))
             print(ml_model_results_filename)
             with open(ml_model_results_filename, 'rt') as f:
                 model_results = f.read()
+
+
         except Exception as e:
             print(e)
             model_results = 'Could not locate the results of a Machine Learning model. You can try to train a new model.'
 
         context['model_results'] = model_results
-        print(context)
+        context['image_precision_recall_curve'] = get_img_data_from_file(
+            BASE_DIR+'/staticfiles/images/models/precision_recall_curve_{}.png'.format(project_id))
+        context['image_roc_curve'] = get_img_data_from_file(
+            BASE_DIR+'/staticfiles/images/models/roc_curve_{}.png'.format(project_id))
+        context['image_confidence_accuracy_graph'] = get_img_data_from_file(
+            BASE_DIR+'/staticfiles/images/models/confidence_accuracy_graph_{}.png'.format(project_id))
+        context['image_learning_curve'] = get_img_data_from_file(
+            BASE_DIR+'/staticfiles/images/models/learning_curve_{}.png'.format(project_id))
         return context
 
 

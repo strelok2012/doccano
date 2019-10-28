@@ -1,6 +1,8 @@
 import Vue from 'vue';
 import HTTP from './http';
 
+import * as bulmaToast from 'bulma-toast';
+
 const vm = new Vue({
   el: '#mail-app',
   delimiters: ['[[', ']]'],
@@ -20,6 +22,11 @@ const vm = new Vue({
   methods: {
       submit() {
           HTTP.patch('', this.projectSettings).then((response) => {
+            bulmaToast.toast({
+              message: 'Successfully saved',
+              type: 'is-success',
+              position: 'top-center',
+            });
           })
       },
       setProjectSettings(data) {

@@ -33,8 +33,9 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = False
 DEBUG = True
-if os.environ.get('DEBUG') == 'False':
-    DEBUG = False
+# if os.environ.get('DEBUG') == 'False':
+#     DEBUG = False
+
 # DEBUG = bool(os.environ.get('DEBUG', False))
 # DEBUG = os.environ.get('DEBUG') == 'TRUE'
 
@@ -151,8 +152,8 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     },
 }
-# DATABASES['default'] = DATABASES['posgres']
-DATABASES['default'] = DATABASES['posgres_local']
+DATABASES['default'] = DATABASES['posgres']
+# DATABASES['default'] = DATABASES['posgres_local']
 
 if "test" in sys.argv:
     DATABASES = {    
@@ -265,7 +266,5 @@ AZURE_APPINSIGHTS_IKEY = os.getenv('AZURE_APPINSIGHTS_IKEY')
 APPLICATION_INSIGHTS = {
     'ikey': AZURE_APPINSIGHTS_IKEY if AZURE_APPINSIGHTS_IKEY else None,
 }
-
-ML_FOLDER = 'ml_models'
 
 django_heroku.settings(locals(), test_runner=False)

@@ -9,7 +9,6 @@ from .utils import get_key_choices
 from server.project_types import project_types
 
 
-
 class Project(models.Model):
     project_types = project_types
 
@@ -30,6 +29,10 @@ class Project(models.Model):
     enable_metadata_search = models.BooleanField(default=False)
     show_ml_model_prediction = models.BooleanField(default=False)
     shuffle_documents = models.BooleanField(default=False)
+
+    def __init__(self, *args, **kwargs):
+        super(Project,self).__init__(*args, **kwargs)
+        Project.list_display = ['id', 'name', 'project_type', 'use_machine_model_sort', 'show_ml_model_prediction']
 
     def get_absolute_url(self):
         return reverse('upload', args=[self.id])
@@ -103,8 +106,10 @@ class Project(models.Model):
         return docs
 
     def get_docs_count(self):
-        docs = self.documents.all()
-        return len(docs)
+        return self.documents.count()
+
+    def get_project_name(self):
+        return self.name
 
     def get_document_serializer(self):
         from .serializers import ClassificationDocumentSerializer
@@ -164,6 +169,7 @@ class Project(models.Model):
                 # so we can copy them after duplicating our parent object.
                 # 'field' is a ManyToOneRel which is not iterable, we need to get
                 # the object attribute itself.
+                print(f'Found a one-to-many field: "{field.name}". Getting records...')
                 related_object_manager = getattr(self, field.name)
                 related_objects = list(related_object_manager.all())
                 if related_objects:
@@ -173,7 +179,7 @@ class Project(models.Model):
             elif field.many_to_one:
                 # In testing, these relationships are preserved when the parent
                 # object is copied, so they don't need to be copied separately.
-                print(f'Found a many-to-one field: {field.name}')
+                print(f'Found a many-to-one field: "{field.name}"')
 
             elif field.many_to_many:
                 # Many to many fields are relationships where many parent objects
@@ -181,6 +187,7 @@ class Project(models.Model):
                 # objects don't need to be copied when we copy the parent, we just
                 # need to re-create the relationship to them on the copied parent.
                 # print(f'Found a many-to-many field: {field.name}')
+                print(f'Found a many-to-many field: "{field.name}". Getting records...')
                 related_object_manager = getattr(self, field.name)
                 relations = list(related_object_manager.all())
                 if relations:
@@ -193,11 +200,13 @@ class Project(models.Model):
         if (new_name):
             self.name = new_name
         self.save()
+        print('Created a new project. Copying related objects...')
         #print(f'Copied parent object ({str(self)})')
 
         # Copy the one-to-many child objects and relate them to the copied parent
+        data_to_copy = {}
         for related_object in related_objects_to_copy:
-            # Iterate through the fields in the related object to find the one that 
+            # Iterate through the fields in the related object to find the one that
             # relates to the parent model.
             for related_object_field in related_object._meta.fields:
                 if related_object_field.related_model == self.__class__:
@@ -207,11 +216,21 @@ class Project(models.Model):
                     # child -> parent relationship.
                     related_object.pk = None
                     setattr(related_object, related_object_field.name, self)
-                    related_object.save()
+                    # related_object.save()
 
-                    text = str(related_object)
-                    text = (text[:40] + '..') if len(text) > 40 else text
-                    #print(f'|- Copied child object ({text})')
+            data_type = (type(related_object)).__name__
+            if data_type not in data_to_copy:
+                data_to_copy[data_type] = {
+                    'values': [],
+                    'type': type(related_object)
+                }
+            data_to_copy[data_type]['values'].append(related_object)
+
+        for data_type_name, data in data_to_copy.items():
+            print('Copying {} records of type {}'.format(len(data['values']), str(data_type)))
+            (data['type']).objects.bulk_create( data['values'] )
+
+        print('Copied related fields')
 
         # Set the many-to-many relations on the copied parent
         for field_name, relations in relations_to_set.items():
@@ -225,6 +244,35 @@ class Project(models.Model):
             #print(f'|- Set {len(relations)} many-to-many relations on {field_name} {text_relations}')
 
         return self
+
+    # def duplicate_object(self, new_name, duplicate_labels):
+    #     from django.db import connection
+    #     import datetime
+    #     now = str(datetime.datetime.utcnow())
+    #     cursor = connection.cursor()
+    #
+    #     query = """
+    #     SELECT
+    #     text, metadata
+    #     FROM server_document
+    #     WHERE project_id = {}""".format(self.id)
+    #     cursor.execute(query)
+    #     # df = pd.DataFrame(cursor.fetchall(), columns=[
+    #     #     'document_id', 'label_id', 'num_labelers', 'last_annotation_date', 'snippet', 'ground_truth', 'model_label',
+    #     #     'model_confidence'
+    #     # ])
+    #     rows = cursor.fetchall()
+    #     dataset = [ (row[0], new_project_id, row[1], now, now) for row in rows ]
+    #
+    #     query = """
+    #     INSERT INTO server_document
+    #     (text, project_id, metadata, created_date_time, updated_date_time)
+    #     VALUES {}
+    #     """.format(','.join([str(x) for x in dataset]))
+    #     cursor.execute(query)
+    #
+    #     x = 1
+    #     pass
 
 
 class Label(models.Model):
@@ -371,6 +419,9 @@ class DocumentAnnotation(Annotation):
 
     class Meta:
         unique_together = ('document', 'user', 'label')
+
+    # def __str__(self):
+    #     return 'AAAA'
 
 class DocumentMLMAnnotation(AnnotationExternal):
     document = models.ForeignKey(Document, related_name='doc_mlm_annotations', on_delete=models.CASCADE)
