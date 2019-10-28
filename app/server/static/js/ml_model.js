@@ -28,28 +28,30 @@ const { reactiveProp, reactiveData } = mixins;
 const vm = new Vue({
   el: '#mail-app',
   delimiters: ['[[[[', ']]]]'],
-  data: {
-    labelData: null,
-    userData: null,
-    progressData: null,
-    showRunModel: false,
-    classWeightsData: [],
-    classWeightsColumns: [
-      {
-        label: 'Term',
-        field: 'term'
-      },
-      {
-        label: 'Weight',
-        field: 'weight',
-        type: 'number'
-      },
-      {
-        label: 'Label',
-        field: 'label'
-      },
-    ],
-    labelsMapping: ''
+  data () {
+    return {
+      labelData: null,
+      userData: null,
+      progressData: null,
+      showRunModel: false,
+      classWeightsData: [],
+      classWeightsColumns: [
+        {
+          label: 'Term',
+          field: 'term'
+        },
+        {
+          label: 'Weight',
+          field: 'weight',
+          type: 'number'
+        },
+        {
+          label: 'Label',
+          field: 'label'
+        },
+      ],
+      labelsMapping: ''
+    }
   },
 
   components: {
@@ -138,7 +140,7 @@ const vm = new Vue({
           this.classWeightsData.push({
             term: weightsData[i][0],
             weight: +weightsData[i][1],
-            label: weightsData[i][2]
+            label: weightsData[i][2] ? weightsData[i][2] : ''
           })
         }
       }
