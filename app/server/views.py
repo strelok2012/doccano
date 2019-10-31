@@ -22,6 +22,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.db import connection
 
+from django.shortcuts import render
+
 import os
 from django.contrib.auth.models import User
 
@@ -810,6 +812,10 @@ class LoginView(BaseLoginView):
                                               if key.endswith('_login'))
         return context
 
+
+def GeckoView(request):
+    my_file = open('server/node_modules/gecko/build/index.html','rb').read()
+    return HttpResponse(my_file, content_type = "text/html")
 
 class DemoTextClassification(TemplateView):
     template_name = 'demo/demo_text_classification.html'

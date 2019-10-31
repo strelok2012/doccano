@@ -51,7 +51,7 @@ project_types = {
     },
     'AudioLabeling': {
         'title': 'audio labeling (Gecko test)',
-        'type': 'SequenceLabeling',
+        'type': 'AudioLabeling',
         # 'image': staticfiles_storage.url('images/cat-1045782_640.jpg'),
         'template_html': 'annotation/audio_labeling.html',
         'document_serializer': '',

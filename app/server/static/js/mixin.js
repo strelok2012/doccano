@@ -466,7 +466,7 @@ const annotationMixin = {
       if (val) {
         localStorage.setItem('doccano_explainMode', true)
         const doc = this.docs[this.pageNumber]
-        this.getExplanation(doc.id)
+        doc && this.getExplanation(doc.id)
       } else {
         localStorage.removeItem('doccano_explainMode')
       }
@@ -475,9 +475,9 @@ const annotationMixin = {
     pageNumber(val) {
       if (this.explainMode) {
         const doc = this.docs[val]
-        this.getExplanation(doc.id)
+        doc && this.getExplanation(doc.id)
         if (this.showLabelers) {
-          this.getLabelers(doc.id)
+          doc && this.getLabelers(doc.id)
         }
       }
     }
@@ -531,13 +531,13 @@ const annotationMixin = {
 
     if (this.explainMode) {
       const doc = this.docs[0]
-      this.getExplanation(doc.id)
+      doc && this.getExplanation(doc.id)
     }
 
     if (document.getElementById('labelersCard')) {
       this.showLabelers = true
       const doc = this.docs[0]
-      this.getLabelers(doc.id)
+      doc && this.getLabelers(doc.id)
     }
 
     window.addEventListener('popstate', this.popState)

@@ -80,7 +80,10 @@ ROOT_URLCONF = 'app.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'server/templates')],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'server/templates'),
+            os.path.join(BASE_DIR, 'server/node_modules')
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -100,6 +103,7 @@ TEMPLATES = [
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'server/static'),
+    os.path.join(BASE_DIR, 'server/node_modules/gecko/build')
 ]
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

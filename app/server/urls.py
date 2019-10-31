@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework import routers
 
 from .views import DataExportToS3
+from .views import GeckoView
 from .views import IndexView, MachineLearningModelView
 from .views import ProjectView, DatasetView, DataUpload, LabelView, StatsView, GuidelineView, SettingsView, LabelersView, LabelAdminView
 from .views import ProjectsView, DataDownload, DataDownloadFile, DocumentExport, DocumentAnnotationExport, LabelExport, UserInfoView, ProjectExport
@@ -60,4 +61,5 @@ urlpatterns = [
     path('demo/text-classification/', DemoTextClassification.as_view(), name='demo-text-classification'),
     path('demo/named-entity-recognition/', DemoNamedEntityRecognition.as_view(), name='demo-named-entity-recognition'),
     path('demo/translation/', DemoTranslation.as_view(), name='demo-translation'),
+    path('gecko/', GeckoView, name='gecko'),
 ]

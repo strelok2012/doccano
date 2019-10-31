@@ -15,6 +15,7 @@ class Project(models.Model):
     DOCUMENT_CLASSIFICATION = 'DocumentClassification'
     SEQUENCE_LABELING = 'SequenceLabeling'
     Seq2seq = 'Seq2seq'
+    AudioLabeling = 'AudioLabeling'
 
     PROJECT_CHOICES = ((k, v['title']) for k,v in project_types.items())
 
@@ -99,6 +100,11 @@ class Project(models.Model):
                 docs = docs.exclude(seq2seq_annotations__user=user)
             else:
                 docs = docs.filter(seq2seq_annotations__isnull=is_null)
+        elif self.is_type_of(Project.AudioLabeling):
+            if user:
+                docs = docs.exclude(audio_labeling_annotations__user=user)
+            else:
+                docs = docs.filter(audio_labeling_annotations__isnull=is_null)
         else:
             print('Project type: '+self.project_type)
             raise ValueError('Invalid project_type')
@@ -115,12 +121,15 @@ class Project(models.Model):
         from .serializers import ClassificationDocumentSerializer
         from .serializers import SequenceDocumentSerializer
         from .serializers import Seq2seqDocumentSerializer
+        from .serializers import AudioDocumentSerializer
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
             return ClassificationDocumentSerializer
         elif self.is_type_of(Project.SEQUENCE_LABELING):
             return SequenceDocumentSerializer
         elif self.is_type_of(Project.Seq2seq):
             return Seq2seqDocumentSerializer
+        elif self.is_type_of(Project.AudioLabeling):
+            return AudioDocumentSerializer
         else:
             raise ValueError('Invalid project_type')
 
@@ -128,12 +137,15 @@ class Project(models.Model):
         from .serializers import DocumentAnnotationSerializer
         from .serializers import SequenceAnnotationSerializer
         from .serializers import Seq2seqAnnotationSerializer
+        from .serializers import AudioAnnotationSerializer
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
             return DocumentAnnotationSerializer
         elif self.is_type_of(Project.SEQUENCE_LABELING):
             return SequenceAnnotationSerializer
         elif self.is_type_of(Project.Seq2seq):
             return Seq2seqAnnotationSerializer
+        elif self.is_type_of(Project.AudioLabeling):
+            return AudioAnnotationSerializer
 
     def get_annotation_class(self):
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
@@ -142,6 +154,10 @@ class Project(models.Model):
             return SequenceAnnotation
         elif self.is_type_of(Project.Seq2seq):
             return Seq2seqAnnotation
+        elif self.is_type_of(Project.Seq2seq):
+            return Seq2seqAnnotation
+        elif self.is_type_of(Project.AudioLabeling):
+            return AudioLabelingAnnotation
 
     def __str__(self):
         return self.name

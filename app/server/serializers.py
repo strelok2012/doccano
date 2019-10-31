@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Label, Project, Document
-from .models import DocumentAnnotation, SequenceAnnotation, Seq2seqAnnotation, DocumentMLMAnnotation
+from .models import DocumentAnnotation, SequenceAnnotation, Seq2seqAnnotation, DocumentMLMAnnotation, AudioLabelingAnnotation
 
 
 class LabelSerializer(serializers.ModelSerializer):
@@ -86,6 +86,12 @@ class Seq2seqAnnotationSerializer(serializers.ModelSerializer):
         model = Seq2seqAnnotation
         fields = ('id', 'text')
 
+class AudioAnnotationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = AudioLabelingAnnotation
+        fields = ('id', 'file_name', 'file_path', 'data')
+
 
 class ClassificationDocumentSerializer(serializers.ModelSerializer):
     annotations = serializers.SerializerMethodField()
@@ -133,6 +139,20 @@ class Seq2seqDocumentSerializer(serializers.ModelSerializer):
         if request:
             annotations = instance.seq2seq_annotations.filter(user=request.user)
             serializer = Seq2seqAnnotationSerializer(annotations, many=True)
+            return serializer.data
+
+    class Meta:
+        model = Document
+        fields = ('id', 'text', 'annotations')
+
+class AudioDocumentSerializer(serializers.ModelSerializer): 
+    annotations = serializers.SerializerMethodField()
+
+    def get_annotations(self, instance):
+        request = self.context.get('request')
+        if request:
+            annotations = instance.audio_labeling_annotations.filter(user=request.user)
+            serializer = AudioAnnotationSerializer(annotations, many=True)
             return serializer.data
 
     class Meta:
