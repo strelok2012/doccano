@@ -33,7 +33,7 @@ from .resources import DocumentResource, DocumentAnnotationResource, LabelResour
 
 from .permissions import SuperUserMixin
 from .forms import ProjectForm
-from .models import Document, Project, DocumentAnnotation, DocumentMLMAnnotation, Label, DocumentGoldAnnotation, User
+from .models import Document, Project, DocumentAnnotation, DocumentMLMAnnotation, Label, DocumentGoldAnnotation, User, AudioLabelingAnnotation
 from app import settings
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -322,7 +322,16 @@ class SettingsView(SuperUserMixin, LoginRequiredMixin, TemplateView):
 
 
 class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
-    template_name = 'admin/dataset_upload.html'
+    def get_template_names(self):
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        if not self.request.user.is_superuser:
+            try:
+                user = project.users.get(id=self.request.user.id)
+            except ObjectDoesNotExist:
+                return '404.html'
+        if (project.is_type_of(Project.AudioLabeling)):
+            return ['admin/dataset_upload_audio.html']
+        return ['admin/dataset_upload.html']
 
     class ImportFileError(Exception):
         def __init__(self, message):
@@ -503,69 +512,149 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         project = get_object_or_404(Project, pk=kwargs.get('project_id'))
         import_format = request.POST['format']
-        try:
-            if (request.POST['url']):
-                s3 = s3fs.S3FileSystem(anon=False)
-                file = s3.open(request.POST['url'], 'rb')
-                import_format = import_format.replace('_url', '')
-            else:
-                file = request.FILES['file'].file
-            documents = []
-            true_labels = []
-            users_lsbels = []
-            if import_format == 'csv':
-                documents = self.csv_to_documents(project, file)
-            elif import_format == 'json':
-                documents = self.json_to_documents(project, file)
-            elif import_format == 'csv_labeled':
-                true_labels = self.labeled_csv_to_labels(project, file)
-            elif import_format == "csv_labeled_users":
-                users_lsbels = self.users_labeled_csv_to_labels(project, file)
-
-            batch_size = settings.IMPORT_BATCH_SIZE
-
-            if (import_format == 'csv' or import_format == 'json'):
+        if (project.is_type_of(Project.AudioLabeling)):
+            try:
+                if (request.POST['url']):
+                    s3 = s3fs.S3FileSystem(anon=False)
+                    file = s3.open(request.POST['url'], 'rb')
+                    import_format = import_format.replace('_url', '')
+                else:
+                    file = request.FILES['file'].file
+                documents = []
+                fail = []
                 docs_len = 0
-                while True:
-                    batch = list(it.islice(documents, batch_size))
-                    if not batch:
-                        break
-                    docs_len += len(batch)
-                    Document.objects.bulk_create(batch, batch_size=batch_size)
-                url = reverse('dataset', args=[project.id])
-                url += '?docs_count=' + str(docs_len)
-                return HttpResponseRedirect(url)
-            elif (import_format == 'csv_labeled'):
-                labels_len = 0
-                while True:
-                    batch = list(it.islice(true_labels, batch_size))
-                    if not batch:
-                        break
-                    labels_len += len(batch)
-                    DocumentGoldAnnotation.objects.bulk_create(batch, batch_size=batch_size)
-                url = reverse('dataset', args=[project.id])
-                url += '?true_labels_count=' + str(labels_len)
-                return HttpResponseRedirect(url)
-            elif (import_format == "csv_labeled_users"):
-                labels_len = 0
-                while True:
-                    batch = list(it.islice(users_lsbels, batch_size))
-                    if not batch:
-                        break
-                    labels_len += len(batch)
-                    DocumentAnnotation.objects.bulk_create(batch, batch_size=batch_size)
-                url = reverse('dataset', args=[project.id])
-                url += '?users_labels_count=' + str(labels_len)
-                
+                if import_format == 'json':
+                    parsed_entries = (json.loads(line) for line in file)
+                    for idx, entry in enumerate(parsed_entries):
+                        if entry.get('media'):
+                            media_req = requests.head(entry['media'])
+                            if (media_req.status_code == 200):
+                                media_url = entry['media']
+                                metadata = {}
+                                new_doc = Document(text=media_url, project=project)
+                                new_doc.save()
+                                docs_len = docs_len + 1
+                                if (entry.get('transcription')):
+                                    for tr in entry['transcription']:
+                                        tr_req = requests.get(tr)
+                                        if (tr_req.status_code == 200):
+                                            filename = tr.split('/')[-1]
+                                            new_annotation = AudioLabelingAnnotation(document=new_doc, file_name=filename, file_path=tr, data=tr_req.text, user=self.request.user)
+                                            new_annotation.save()
+                                        else:
+                                            fail.append({
+                                                'reason': 'transcription_unavailable',
+                                                'message': tr
+                                            })
+                            else:
+                                fail.append({
+                                    'reason': 'media_unavailable',
+                                    'message': entry['media']
+                                })
+                        else:
+                            fail.append({
+                                'reason': 'no_media',
+                                'message': idx
+                            })
+                batch_size = settings.IMPORT_BATCH_SIZE
+                    
+                #while True:
+                #    batch = list(it.islice(documents, batch_size))
+                #    if not batch:
+                #        break
+                #    docs_len += len(batch)
+                #    Document.objects.bulk_create(batch, batch_size=batch_size, ignore_conflicts=True)
+                response = {
+                    'fail': fail,
+                    'success': docs_len
+                }
+                return HttpResponse(json.dumps(response), content_type="application/json")
 
-        except DataUpload.ImportFileError as e:
-            messages.add_message(request, messages.ERROR, e.message)
-            return HttpResponseRedirect(reverse('upload', args=[project.id]))
-        except Exception as e:
-            logger.exception(e)
-            messages.add_message(request, messages.ERROR, 'Something went wrong')
-            messages.add_message(request, messages.ERROR, e)
-            return HttpResponseRedirect(reverse('upload', args=[project.id]))
+            except DataUpload.ImportFileError as e:
+                response = {
+                    'fail': [
+                        {
+                            'reason': 'import_file_error',
+                            'message': e.message
+                        }
+                    ]
+                }
+                return HttpResponse(json.dumps(response), content_type="application/json")
+            except Exception as e:
+                response = {
+                    'fail': [
+                        {
+                            'reason': 'exception',
+                            'message': e
+                        }
+                    ]
+                }
+                return HttpResponse(json.dumps(response), content_type="application/json")
+
+        else:
+            try:
+                if (request.POST['url']):
+                    s3 = s3fs.S3FileSystem(anon=False)
+                    file = s3.open(request.POST['url'], 'rb')
+                    import_format = import_format.replace('_url', '')
+                else:
+                    file = request.FILES['file'].file
+                documents = []
+                true_labels = []
+                users_lsbels = []
+                if import_format == 'csv':
+                    documents = self.csv_to_documents(project, file)
+                elif import_format == 'json':
+                    documents = self.json_to_documents(project, file)
+                elif import_format == 'csv_labeled':
+                    true_labels = self.labeled_csv_to_labels(project, file)
+                elif import_format == "csv_labeled_users":
+                    users_lsbels = self.users_labeled_csv_to_labels(project, file)
+
+                batch_size = settings.IMPORT_BATCH_SIZE
+
+                if (import_format == 'csv' or import_format == 'json'):
+                    docs_len = 0
+                    while True:
+                        batch = list(it.islice(documents, batch_size))
+                        if not batch:
+                            break
+                        docs_len += len(batch)
+                        Document.objects.bulk_create(batch, batch_size=batch_size)
+                    url = reverse('dataset', args=[project.id])
+                    url += '?docs_count=' + str(docs_len)
+                    return HttpResponseRedirect(url)
+                elif (import_format == 'csv_labeled'):
+                    labels_len = 0
+                    while True:
+                        batch = list(it.islice(true_labels, batch_size))
+                        if not batch:
+                            break
+                        labels_len += len(batch)
+                        DocumentGoldAnnotation.objects.bulk_create(batch, batch_size=batch_size)
+                    url = reverse('dataset', args=[project.id])
+                    url += '?true_labels_count=' + str(labels_len)
+                    return HttpResponseRedirect(url)
+                elif (import_format == "csv_labeled_users"):
+                    labels_len = 0
+                    while True:
+                        batch = list(it.islice(users_lsbels, batch_size))
+                        if not batch:
+                            break
+                        labels_len += len(batch)
+                        DocumentAnnotation.objects.bulk_create(batch, batch_size=batch_size)
+                    url = reverse('dataset', args=[project.id])
+                    url += '?users_labels_count=' + str(labels_len)
+                    
+
+            except DataUpload.ImportFileError as e:
+                messages.add_message(request, messages.ERROR, e.message)
+                return HttpResponseRedirect(reverse('upload', args=[project.id]))
+            except Exception as e:
+                logger.exception(e)
+                messages.add_message(request, messages.ERROR, 'Something went wrong')
+                messages.add_message(request, messages.ERROR, e)
+                return HttpResponseRedirect(reverse('upload', args=[project.id]))
     
     def get_context_data(self, **kwargs):
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])

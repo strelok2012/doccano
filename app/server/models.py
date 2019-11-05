@@ -480,7 +480,7 @@ class AudioLabelingAnnotation(Annotation):
     done = models.BooleanField(default=False)
     file_name = models.TextField(blank=True)
     file_path = models.TextField(blank=True)
-    data = JSONField()
+    data = models.TextField(blank=True)
 
     class Meta:
         unique_together = ('document', 'user')

@@ -16,7 +16,8 @@ const vm = new Vue({
       return {
           geckoReady: false,
           fileName: null,
-          filePath: null
+          filePath: null,
+          docNumber: 0
       }
   },
   created () {
@@ -28,10 +29,14 @@ const vm = new Vue({
     }, false)
     const geckoRes = await this.loadGecko()
     this.geckoReady = geckoRes
-
-    this.loadDoc(this.docs[this.pageNumber])
+    this.tryInit()
   },
   methods: {
+      tryInit () {
+        if (this.docs && this.docs.length && this.geckoReady) {
+          this.loadDoc(this.docs[this.docNumber])
+        }
+      },
       loadDoc (doc) {
         const url = doc.text
         const urlSplit = url.split('/')
@@ -47,6 +52,8 @@ const vm = new Vue({
         if (ctms && ctms.length) {
             eventData.ctms = ctms
         }
+
+        console.log('load doc')
         const event = new CustomEvent('loadExternal', {
             detail: eventData
          })
@@ -56,7 +63,7 @@ const vm = new Vue({
         this.$refs.gecko.contentDocument.dispatchEvent(event)
       },
       async saveAudioAnnotation (data) {
-        const doc = this.docs[this.pageNumber]
+        const doc = this.docs[this.docNumber]
         const docId = doc.id;
         const payload = {
           file_path: this.filePath,
@@ -78,14 +85,19 @@ const vm = new Vue({
                 resolve(true)
             }, false)
         })
+      },
+      nextDoc () {
+        this.docNumber = this.docNumber + 1
+        this.loadDoc(this.docs[this.docNumber])
+      },
+      prevDoc () {
+        this.docNumber = this.docNumber - 1
+        this.loadDoc(this.docs[this.docNumber])
       }
   },
   watch: {
-      geckoReady (newValue) {
-          console.log('IS READY')
-      },
       docs (newValue) {
-          console.log('docs', newValue)
+        this.tryInit()
       }
   }
 });

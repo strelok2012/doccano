@@ -1,0 +1,134 @@
+{% extends "admin/admin_base.html" %}
+{% load static %}
+{% block content-area %}
+
+<div class="columns">
+        <div class="column is-12">
+      
+          <div class="card">
+            <header class="card-header">
+              <p class="card-header-title">
+                Import audio items
+              </p>
+              <a href="#" class="card-header-icon" aria-label="more options">
+                <span class="icon">
+                  <i class="fas fa-angle-down" aria-hidden="true"></i>
+                </span>
+              </a>
+            </header>
+            <div class="card-content">
+              <p>
+                <b>To annotate audio, you first need to import a set of audio items to annotate it.</b>
+              </p>
+              <ul.is-unstyled>
+                  <li>JSON file: each line should contain a json object with at least one key 'media', which contains a media file URL.</li>
+              </ul.is-unstyled>
+              <form action="" method="post" @submit="submit" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="column is-12 tabs">
+                  <ul>
+                    <li :class="{'is-active' : activeTab == 1}" @click="setTab(1)"><a>Upload from computer</a></li>
+                    <li :class="{'is-active' : activeTab == 2}" @click="setTab(2)"><a>Upload by URL</a></li>
+                  </ul>
+                </div>
+                <div class="column is-12 tabs-content">
+                  <div class="tab-content" :class="{'is-active' : activeTab == 1}" >
+                      <div class="section pt10">
+                        <div class="control mb10">
+                          <template v-for="format in formats.local">
+                              <label class="radio">
+                                  <input type="radio" name="format" :value="format.value" v-model="selectedFormat">
+                                  [[ format.text ]]
+                                </label>
+                                <br/>
+                          </template>
+                        </div>
+                        <div class="control">
+                          <div class="file has-name is-small mb20">
+                            <label class="file-label">
+                              <input class="file-input" type="file" ref="file" name="file" v-on:change="handleFileUpload">
+                              <span class="file-cta">
+                                <span class="file-icon">
+                                  <i class="fas fa-upload"></i>
+                                </span>
+                                <span class="file-label">
+                                  Select a file…
+                                </span>
+                              </span>
+                              <span class="file-name">
+                                [[ file.name ]]
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                  </div>
+                  <div class="tab-content" :class="{'is-active' : activeTab == 2}" >
+                      <div class="section pt10">
+                          <div class="control mb10">
+                            <template v-for="format in formats.url">
+                                <label class="radio">
+                                    <input type="radio" name="format" :value="format.value" v-model="selectedFormat">
+                                    [[ format.text ]]
+                                  </label>
+                                  <br/>
+                            </template>
+                          </div>
+                          <div class="field is-horizontal">
+                            <div class="field-label is-normal">
+                              <label class="label">URL</label>
+                            </div>
+                            <div class="field-body">
+                              <div class="field">
+                                <p class="control">
+                                  <input class="input" type="text" name="url" v-model="inputUrl" placeholder="https://example.com/tet.csv">
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                        </div>
+                  </div>
+                </div>
+
+                <div class="column is-10 is-fullheight">
+                    <div>
+                      <article class='message is-danger' v-if="fail && fail.length">
+                        <div class='message-body'>
+                          <div v-for="f in fail">
+                            <pre v-if="f.reason == 'no_media'">No media file at row [[ f.message ]]</pre>
+                            <pre v-if="f.reason == 'media_unavailable'">Media file is unavailable: [[ f.message ]]</pre>
+                            <pre v-if="f.reason == 'transcription_unavailable'">Transcription file is unavailable: [[ f.message ]]</pre>
+                            <pre v-if="f.reason == 'import_file_error'">Import file error: [[ f.message ]]</pre>
+                            <pre v-if="f.reason == 'exception'">Something went wrong: [[ f.message ]]</pre>
+                          </div>
+                        </div>
+                      </article>
+
+                      <article class='message is-success' v-if="success">
+                          <div class='message-body'>
+                            <div>
+                              <pre>Successefully imported [[ success ]] documents</pre>
+                            </div>
+                          </div>
+                        </article>
+                    </div>
+                </div>
+      
+                <div class="field is-grouped">
+                  <div class="control">
+                    <button type="submit" class="button is-primary">Upload dataset</button>
+                  </div>
+                  <div class="control">
+                    <button class="button is-text">Cancel</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+{% endblock %}
+{% block footer %}
+<script src="{% static 'bundle/upload_audio.js' %}"></script>
+{% endblock %}

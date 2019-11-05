@@ -13,7 +13,6 @@
     "chart.js": "^2.7.2",
     "custom-event-polyfill": "^1.0.7",
     "element-matches": "^0.1.2",
-    "gecko": "git+https://git@github.com/strelok2012/gecko.git",
     "vue": "^2.6.10",
     "vue-chartjs": "^3.4.0",
     "vue-good-table": "^2.16.4",

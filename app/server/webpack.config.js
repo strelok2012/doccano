@@ -23,7 +23,8 @@ module.exports = {
         'user': './static/js/user.js',
         'user_info': './static/js/user_info.js',
         'ml_model': './static/js/ml_model.js',
-        'audio_annotation': './static/js/audio_annotation.js'
+        'audio_annotation': './static/js/audio_annotation.js',
+        'upload_audio': './static/js/upload_audio.js'
     },
     output: {
         path: __dirname + '/static/bundle',
