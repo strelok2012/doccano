@@ -903,7 +903,7 @@ class LoginView(BaseLoginView):
 
 
 def GeckoView(request):
-    my_file = open('server/node_modules/gecko/build/index.html','rb').read()
+    my_file = open('server/node_modules/gecko/build_external/index.html','rb').read()
     return HttpResponse(my_file, content_type = "text/html")
 
 class DemoTextClassification(TemplateView):

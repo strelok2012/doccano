@@ -17,7 +17,8 @@ const vm = new Vue({
           geckoReady: false,
           fileName: null,
           filePath: null,
-          docNumber: 0
+          docNumber: 0,
+          annotation: null
       }
   },
   created () {
@@ -50,14 +51,16 @@ const vm = new Vue({
             }
         }
         if (ctms && ctms.length) {
-            eventData.ctms = ctms
+          eventData.ctms = ctms
+          this.annotation = ctms[0]
+        } else {
+          this.annotation = null
         }
 
-        console.log('load doc')
         const event = new CustomEvent('loadExternal', {
             detail: eventData
          })
-
+        
         this.fileName = fileName
         this.filePath = url
         this.$refs.gecko.contentDocument.dispatchEvent(event)
@@ -70,9 +73,15 @@ const vm = new Vue({
           file_name: data.filename,
           data: data.data
         };
-        await HTTP.post(`docs/${docId}/annotations/`, payload).then((response) => {
-          // this.annotations[pageNumber].push(response.data);
-        });
+        if (this.annotation) {
+          await HTTP.put(`docs/${docId}/annotations/${this.annotation.id}`, payload).then((response) => {
+            this.docs[this.docNumber].annotations = [ response.data ]
+          });
+        } else {
+          await HTTP.post(`docs/${docId}/annotations/`, payload).then((response) => {
+            this.docs[this.docNumber].annotations = [ response.data ]
+          });
+        }
         bulmaToast.toast({
             message: `Successfully saved to DB.`,
             type: 'is-success',
@@ -87,12 +96,16 @@ const vm = new Vue({
         })
       },
       nextDoc () {
-        this.docNumber = this.docNumber + 1
-        this.loadDoc(this.docs[this.docNumber])
+        if (this.docNumber < this.docs.length - 1) {
+          this.docNumber = this.docNumber + 1
+          this.loadDoc(this.docs[this.docNumber])
+        }
       },
       prevDoc () {
-        this.docNumber = this.docNumber - 1
-        this.loadDoc(this.docs[this.docNumber])
+        if (this.docNumber >= 1) {
+          this.docNumber = this.docNumber - 1
+          this.loadDoc(this.docs[this.docNumber])
+        }
       }
   },
   watch: {
