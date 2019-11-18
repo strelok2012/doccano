@@ -15,6 +15,8 @@ logger = logging.getLogger('text classifier')
 ngram_range = (1, 1)
 # ngram_range = (1, 2)
 
+RUN_FASTTEXT = True
+
 class TextClassifier(BaseClassifier):
     @classmethod
     def load(cls, filename):
@@ -136,8 +138,6 @@ class TextClassifier(BaseClassifier):
             print('Running the model on the entire dataset...')
 
             columns = ['document_id', label_field, 'user_id', 'prob']
-            # output_df = pd.DataFrame(columns=columns)
-            # output_df.to_csv(output_filename, index=False, header=True, index_label=False)
 
             if bootstrap_iterations > 0:
                 print('Bootstrapping...')
@@ -176,6 +176,11 @@ class TextClassifier(BaseClassifier):
                         chunk_prediction_df[label_field] = chunk_prediction_df['prediction']
                         chunk_prediction_df[columns].to_csv(output_filename, index=False, header=True)
 
+        # output_df = pd.DataFrame(columns=columns)
+        # output_df.to_csv(output_filename, index=False, header=True, index_label=False)
+
+        os.makedirs('staticfiles/images/models/', exist_ok=True)
+
         print('Saving model weights to file...')
         class_weights = self.important_features
         class_weights_filename = ML_FOLDER+'/ml_logistic_regression_weights_{project_id}.csv'.format(project_id=project_id)
@@ -192,6 +197,12 @@ class TextClassifier(BaseClassifier):
 
         y_test_pred = self.predict(X_test)
         y_test_pred_proba = self.predict_proba(X_test)
+
+        # # Showing examples of large errors
+        # df_labeled.loc[:, 'y_pred'] = self.predict(X)
+        # df_labeled.loc[:, 'is_error'] = df_labeled['y_pred']!=df_labeled[label_field]
+        # df_labeled.loc[:, 'y_pred_proba'] = np.max(self.predict_proba(X), axis=1)
+        # df_labeled.to_csv(output_filename, index=False, header=True, index_label=False)
 
         # Confusion matrix
         print('Generating confusion matrix...')
@@ -231,6 +242,16 @@ class TextClassifier(BaseClassifier):
         except ValueError as e:
             print(e)
 
+        # Confidence Distribution
+        print('Computing distribution of confidence...')
+        try:
+            ax = pd.Series(np.max(y_test_pred_proba, axis=1)).hist(bins=50)
+            plt.xlabel('Confidence'); plt.ylabel('Counts')
+            plt.gcf().savefig('staticfiles/images/models/confidence_distribution_{}.png'.format(project_id))
+            plt.clf()
+        except ValueError as e:
+            print(e)
+
         # Generating learning curve
         print('Generating the learning curve...')
         from classifier.learning_curve import plot_learning_curve_cv
@@ -238,9 +259,32 @@ class TextClassifier(BaseClassifier):
         fig.savefig('staticfiles/images/models/learning_curve_{}.png'.format(project_id))
         plt.clf()
 
-
         # Word cloud on high confidence
 
+
+        # Run FastText for text classification
+        df_labeled_train = df_labeled.loc[ X_train.index, : ]
+        df_labeled_test = df_labeled.loc[X_test.index, :]
+
+        if RUN_FASTTEXT:
+            try:
+                print('Running FastText model...')
+                import fasttext
+                def write_as_fasttext_format(df, filename):
+                    with open(filename, 'wt', encoding='utf-8') as f:
+                        _ = [f.write('{} __label__{}\n'.format( r['text'].lower().replace('\n', ' '), r['label_id'].replace(' ', '_'))) for i,r in df.iterrows()]
+
+                write_as_fasttext_format(df_labeled_train, ML_FOLDER+'/fasttext_train.txt')
+                write_as_fasttext_format(df_labeled_test, ML_FOLDER+'/fasttext_test.txt')
+                classifier = fasttext.supervised(ML_FOLDER+'/fasttext_train.txt', 'model')
+                fasttext_result = classifier.test(ML_FOLDER+'/fasttext_test.txt')
+                fasttext_pred = classifier.predict([r['text'].lower().replace('\n', ' ') for i,r in df_labeled_test.iterrows()])
+                fasttext_pred = [x[0] for x in fasttext_pred]
+
+                _, evaluation_text = self.evaluate(X=None, y=df_labeled_test['label_id'].str.replace(' ', '_').values, y_pred=fasttext_pred)
+                result += '\nFastText performance on gold labels set: \n' + evaluation_text
+            except Exception as e:
+                print(e)
 
         print('Done running the model!')
         return result
@@ -279,7 +323,7 @@ if __name__ == '__main__':
     INPUT_FILE = ML_FOLDER + 'ml_input.csv'
     OUTPUT_FILE = ML_FOLDER + 'output.csv'
 
-    run_model_on_file(
+    result = run_model_on_file(
         # input_filename='../../ml_models/ml_input.csv',
         # output_filename='../../ml_models/ml_out_manual.csv',
         input_filename=INPUT_FILE,
@@ -289,3 +333,4 @@ if __name__ == '__main__':
         label_id=None,
         run_on_entire_dataset=False)
 
+    print(result)

@@ -167,9 +167,10 @@ class BaseClassifier:
 
         return prediction_df
 
-    def evaluate(self, X, y):
+    def evaluate(self, X, y, y_pred=None):
         evaluation_result_str = ''
-        y_pred = self.predict(X)
+        if X is not None:
+            y_pred = self.predict(X)
 
         evaluation_result_str += classification_report(y, y_pred)
 
