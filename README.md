@@ -13,6 +13,8 @@ Doccano allows for the integration of the work of multiple labelers, and provide
 ## Presentation
 We presented Doccano at the <a target="_blank" href="https://www.aidatasciencesummit.com/">2019 Data Science Summit</a>. Slides are available <a target="_blank" href="https://docs.google.com/presentation/d/1mj3FYsYKrxHmCqV-02B_NeoaUpLZntrkmQvRlW5Sn_M/edit?usp=sharing">here</a> and a video of the talk is <a target="_blank" href="https://www.youtube.com/watch?v=Au3N0q_iN2c&t=1s">here</a>.
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Au3N0q_iN2c" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 ## Features
 
 * Provides collaborative annotation of multiple labelers, with user authentication
