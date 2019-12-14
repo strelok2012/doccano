@@ -442,7 +442,7 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
                     continue
                 label_obj = Label.objects.filter(text__exact=row[label_col], project=project)
                 if len(label_obj)>1:
-                    errors.appeмnd('Found multiple labels with text "{}"'.format(row[label_col]))
+                    errors.append('Found multiple labels with text "{}"'.format(row[label_col]))
                     continue
                 else:
                     label_obj = label_obj.first()
