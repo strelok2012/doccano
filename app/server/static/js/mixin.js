@@ -412,6 +412,7 @@ const annotationMixin = {
     },
 
     async getExplanation(id) {
+      this.docExplanation = null
       const response = await HTTP.get(`docs/${id}/explanation`)
       if (response.data) {
         this.docExplanation = response.data.document
