@@ -32,6 +32,9 @@ pip install -r requirements.txt
 cd app
 ```
 
+Make sure that the database connection settings are properly configured under `app/app/setting.py`.
+Change `DATABASES['default']` to the desired connection.
+
 First we need to make migration. Run the following command:
 
 ```bash
