@@ -747,8 +747,10 @@ class DocumentList(generics.ListCreateAPIView):
         if self.request.query_params.get('is_checked'):
             if (self.request.query_params.get('is_checked') == 'true'):
                 queryset = project.get_unannotated_documents(user=self.request.user.id)
-            else:
+            elif (self.request.query_params.get('is_checked') == 'false'):
                 queryset = project.get_annotated_documents(user=self.request.user.id)
+            else:
+                queryset = project.get_annotated_documents(user=self.request.user.id, label=self.request.query_params.get('is_checked'))
 
 
         if (project.use_machine_model_sort):

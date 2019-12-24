@@ -97,10 +97,12 @@ class Project(models.Model):
 
         return docs
     
-    def get_annotated_documents(self, user):
+    def get_annotated_documents(self, user, label=None):
         docs = self.documents.all()
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
-            if user:
+            if user and label:
+                docs = docs.filter(doc_annotations__user=user, doc_annotations__label=label)
+            elif user:
                 docs = docs.filter(doc_annotations__user=user)
         elif self.is_type_of(Project.SEQUENCE_LABELING):
             if user:
