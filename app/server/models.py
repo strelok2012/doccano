@@ -80,6 +80,39 @@ class Project(models.Model):
             docs = docs.filter(doc_annotations__isnull=False)
         return docs
 
+    def get_unannotated_documents(self, user):
+        docs = self.documents.all()
+        if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
+            if user:
+                docs = docs.exclude(doc_annotations__user=user)
+        elif self.is_type_of(Project.SEQUENCE_LABELING):
+            if user:
+                docs = docs.exclude(seq_annotations__user=user)
+        elif self.is_type_of(Project.Seq2seq):
+            if user:
+                docs = docs.exclude(seq2seq_annotations__user=user)
+        else:
+            print('Project type: '+self.project_type)
+            raise ValueError('Invalid project_type')
+
+        return docs
+    
+    def get_annotated_documents(self, user):
+        docs = self.documents.all()
+        if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
+            if user:
+                docs = docs.filter(doc_annotations__user=user)
+        elif self.is_type_of(Project.SEQUENCE_LABELING):
+            if user:
+                docs = docs.filter(seq_annotations__user=user)
+        elif self.is_type_of(Project.Seq2seq):
+            if user:
+                docs = docs.filter(seq2seq_annotations__user=user)
+        else:
+            print('Project type: '+self.project_type)
+            raise ValueError('Invalid project_type')
+
+        return docs
 
     def get_documents(self, is_null=True, user=None):
         docs = self.documents.all()
