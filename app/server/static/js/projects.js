@@ -81,7 +81,7 @@ const vm = new Vue({
   },
 
   created() {
-    axios.get(`${baseUrl}/api/projects`).then((response) => {
+    axios.get(`${baseUrl}/api/projects/`).then((response) => {
       this.items = response.data;
     });
   },
