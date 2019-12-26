@@ -1,5 +1,6 @@
 import csv
 import json
+import random
 from io import TextIOWrapper, StringIO, BytesIO
 import itertools as it
 import logging
@@ -544,15 +545,37 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
                 start_offset = row[start_offset_col]
                 end_offset = row[end_offset_col]
 
-                if (label_obj and document_obj and user_obj):
-                    labels_set.append([label_obj, document_obj, user_obj, start_offset, end_offset])
+                labels_set_row = []
+
+                if (label_obj):
+                    labels_set_row.append(label_obj)
                 else:
-                    if (not label_obj):
-                        errors.append('Label "' + row[label_col] + '" is not found')
-                    if (not document_obj):
-                        errors.append('Document with text "' + row[text_col] + '" is not found')
-                    if (not user_obj):
-                        errors.append('User with name "' + row[user_col] + '" is not found')
+                    new_label_color = "%06x" % random.randint(0, 0xFFFFFF)
+                    new_label = Label.objects.create(
+                        background_color='#' + new_label_color,
+                        text=row[label_col],
+                        project=project
+                    )
+                    labels_set_row.append(new_label)
+                
+                if (document_obj):
+                    labels_set_row.append(document_obj)
+                else:
+                    new_document = Document.objects.create(
+                        text=row[text_col],
+                        project=project
+                    )
+                    labels_set_row.append(new_document)
+
+                if (user_obj):
+                    labels_set_row.append(user_obj)
+                else:
+                    errors.append('User with name "' + row[user_col] + '" is not found')
+
+                labels_set_row.append(start_offset)
+                labels_set_row.append(end_offset)
+                labels_set.append(labels_set_row)
+                        
             if len(errors):
                 raise DataUpload.ImportFileError('Encoutered {} errors: \n\n{}'.format(len(errors), '\n\n'.join(errors)) )
 

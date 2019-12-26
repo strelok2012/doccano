@@ -23,6 +23,11 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username', 'email', 'projects')
 
+class ProjectListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ('id', 'name', 'description', 'project_type', 'image', 'updated_at')
+
 class ProjectSerializer(serializers.ModelSerializer):
     progress = serializers.SerializerMethodField()
     class Meta:

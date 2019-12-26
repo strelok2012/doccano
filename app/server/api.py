@@ -38,7 +38,7 @@ from rest_framework.views import APIView
 
 from .models import Project, Label, Document, DocumentAnnotation, DocumentMLMAnnotation
 from .permissions import IsAdminUserAndWriteOnly, IsProjectUser, IsOwnAnnotation
-from .serializers import ProjectSerializer, LabelSerializer, Word2vecSerializer, UserSerializer
+from .serializers import ProjectSerializer, ProjectListSerializer, LabelSerializer, Word2vecSerializer, UserSerializer
 from .filters import ExcludeSearchFilter
 
 from .labelers_comparison_functions import create_kappa_comparison_df, compute_average_agreement_per_labeler, add_agreement_columns
@@ -103,7 +103,7 @@ def get_labels_admin(project_id):
 
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectListSerializer
     pagination_class = None
     permission_classes = (IsAuthenticated, IsAdminUserAndWriteOnly)
 
