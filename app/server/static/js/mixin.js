@@ -562,9 +562,9 @@ const annotationMixin = {
     },
 
     compiledMarkdown() {
-      return marked(this.guideline, {
+      return this.guideline ? marked(this.guideline, {
         sanitize: true,
-      });
+      }) : ''
     },
 
     id2label() {

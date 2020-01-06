@@ -751,12 +751,8 @@ class DocumentList(generics.ListCreateAPIView):
                 queryset = project.get_annotated_documents(user=self.request.user.id)
             else:
                 queryset = project.get_annotated_documents(user=self.request.user.id, label=self.request.query_params.get('is_checked'))
-
-
-        if (project.use_machine_model_sort):
-            queryset = queryset.order_by('doc_mlm_annotations__prob').filter(project=self.kwargs['project_id'])
         else:
-            queryset = queryset.order_by('doc_annotations__prob').filter(project=self.kwargs['project_id'])
+            queryset = project.get_all_documents(user=self.request.user.id)
 
         if (self.request.query_params.get('rules')):
             result = []
@@ -781,10 +777,6 @@ class DocumentList(generics.ListCreateAPIView):
                     if (should_append):
                         result.append(doc.id)
                 queryset = queryset.filter(id__in=result)
-
-        if project.shuffle_documents:
-            print('order randomly')
-            queryset = queryset.order_by('?')
         return queryset
 
 class MetadataAPI(APIView):
