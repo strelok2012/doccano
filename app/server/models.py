@@ -80,39 +80,54 @@ class Project(models.Model):
             docs = docs.filter(doc_annotations__isnull=False)
         return docs
 
-    def get_unannotated_documents(self, user):
-        docs = self.documents.all()
+    def get_documents_kwargs(self, user):
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
-            if user:
-                docs = docs.exclude(doc_annotations__user=user)
+            key = "doc_annotations__user"
         elif self.is_type_of(Project.SEQUENCE_LABELING):
-            if user:
-                docs = docs.exclude(seq_annotations__user=user)
+            key = "seq_annotations__user"
         elif self.is_type_of(Project.Seq2seq):
-            if user:
-                docs = docs.exclude(seq2seq_annotations__user=user)
+            key = "seq_annotations__user"
         else:
             print('Project type: '+self.project_type)
             raise ValueError('Invalid project_type')
 
+        return { key : user }
+
+    def get_unannotated_documents(self, user):
+        docs = self.documents.filter(project=self.pk)
+        if not user:
+            return docs
+
+        docs = docs.exclude(**self.get_documents_kwargs(user))
+
         return docs
+
+    def get_annotated_ordering(self):
+        if self.shuffle_documents:
+            order = '?'
+        elif self.use_machine_model_sort:
+            order = 'doc_mlm_annotations__prob'
+        else:
+            order = 'doc_annotations__prob'
+
+        return order
     
     def get_annotated_documents(self, user):
-        docs = self.documents.all()
-        if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
-            if user:
-                docs = docs.filter(doc_annotations__user=user)
-        elif self.is_type_of(Project.SEQUENCE_LABELING):
-            if user:
-                docs = docs.filter(seq_annotations__user=user)
-        elif self.is_type_of(Project.Seq2seq):
-            if user:
-                docs = docs.filter(seq2seq_annotations__user=user)
-        else:
-            print('Project type: '+self.project_type)
-            raise ValueError('Invalid project_type')
+        docs = self.documents.filter(project=self.pk)
+        if not user:
+            return docs
 
-        return docs
+        return docs.filter(**self.get_documents_kwargs(user)).order_by(self.get_annotated_ordering())
+    
+    def get_all_documents(self, user):
+        docs = self.documents.filter(project=self.pk)
+        if not user:
+            return docs
+        
+        annotated = docs.filter(**self.get_documents_kwargs(user)).order_by(self.get_annotated_ordering())
+        unannotated = docs.exclude(**self.get_documents_kwargs(user))
+
+        return unannotated.union(annotated, all=True)
 
     def get_documents(self, is_null=True, user=None):
         docs = self.documents.all()
