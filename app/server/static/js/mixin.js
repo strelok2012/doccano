@@ -357,7 +357,6 @@ const annotationMixin = {
     },
 
     getState() {
-      console.log(this.picked)
       if (this.picked === 'all') {
         return '';
       }
