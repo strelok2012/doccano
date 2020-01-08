@@ -654,15 +654,24 @@ class ProjectDetails(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUser)
     lookup_url_kwarg = 'project_id'
 
+    @action(methods=['get'], detail=True)
+    def progress(self, request, pk=None):
+        project = self.get_object()
+        return Response(project.get_progress(self.request.user))
+
 
 class ProjectList(generics.ListCreateAPIView):
-    queryset = Project.objects.all()
+    queryset = Project.objects.all().order_by('-updated_at')
     serializer_class = ProjectListSerializer
-    permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUser)
+    pagination_class = None
+    permission_classes = (IsAuthenticated, IsAdminUserAndWriteOnly)
 
-    def get_queryset(self):
-        print('here')
-        return self.queryset
+class ProjectProgressAPI(APIView):
+    pagination_class = None
+    permission_classes = (IsAuthenticated, IsAdminUserAndWriteOnly)
+    def get(self, request, *args, **kwargs):
+        project = get_object_or_404(Project, pk=self.kwargs['project_id'])
+        return Response(project.get_progress(self.request.user))
 
 
 class LabelDetail(generics.RetrieveUpdateDestroyAPIView):
