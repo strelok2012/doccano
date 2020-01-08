@@ -6,17 +6,17 @@ from .views import IndexView, MachineLearningModelView
 from .views import ProjectView, DatasetView, DataUpload, LabelView, StatsView, GuidelineView, SettingsView, LabelersView, LabelAdminView
 from .views import ProjectsView, DataDownload, DataDownloadFile, DocumentExport, DocumentAnnotationExport, LabelExport, UserInfoView, ProjectExport
 from .views import DemoTextClassification, DemoNamedEntityRecognition, DemoTranslation, LabelsAdminDownloadFile, UsersAdminView, UserView
-from .api import ProjectViewSet, UserViewSet, LabelList, ProjectStatsAPI, LabelDetail, DocumentDetail, ProjectDetail, ProjectsDetail, UserInfo, \
+from .api import ProjectViewSet, UserViewSet, LabelList, ProjectStatsAPI, LabelDetail, DocumentDetail, ProjectDetails, ProjectList, UserInfo, \
     AnnotationList, AnnotationDetail, DocumentList, RunModelAPI, LabelersListAPI, LabelAdminAPI, DocumentExplainAPI, DocumentLabelersAPI, SuggestedTerms, MetadataAPI, UserList, ClassWeightsApi
 
 router = routers.DefaultRouter()
-router.register(r'projects', ProjectViewSet)
+#router.register(r'projects', ProjectViewSet)
 router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path('', IndexView.as_view(), name='index'),
-    path('api/projects', ProjectsDetail.as_view(), name='projects-api'),
-    path('api/projects/<int:project_id>', ProjectDetail.as_view(), name='project-api'),
+    path('api/projects/', ProjectList.as_view(), name='projects-list'),
+    path('api/projects/<int:project_id>/', ProjectDetails.as_view(), name='project-api'),
     path('api/projects/<int:project_id>/stats/', ProjectStatsAPI.as_view(), name='stats-api'),
     path('api/projects/<int:project_id>/runmodel/', RunModelAPI.as_view(), name='runmodel-api'),
     path('api/projects/<int:project_id>/labels/', LabelList.as_view(), name='labels'),
