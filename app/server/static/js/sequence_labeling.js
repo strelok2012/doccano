@@ -1,4 +1,6 @@
 import Vue from 'vue';
+import * as bulmaToast from 'bulma-toast';
+
 import annotationMixin from './mixin';
 import HTTP from './http';
 import simpleShortcut from './filter';
@@ -10,11 +12,11 @@ Vue.use(require('vue-shortkey'), {
 Vue.filter('simpleShortcut', simpleShortcut);
 
 Vue.component('annotator', {
-  template: '<div @click="setSelectedRange">\
+  template: '<div>\
                     <span class="text-sequence"\
                          v-for="r in chunks"\
                          v-if="id2label[r.label]"\
-                         v-bind:class="{tag: id2label[r.label].text_color}"\
+                         v-bind:class="{tag: id2label[r.label].text_color, \'text-sequence--sentence\': sentenceLabeling}"\
                          v-bind:style="{ color: id2label[r.label].text_color, backgroundColor: id2label[r.label].background_color }"\
                     >{{ text.slice(r.start_offset, r.end_offset) }}<button class="delete is-small"\
                                          v-if="id2label[r.label].text_color"\
@@ -23,16 +25,49 @@ Vue.component('annotator', {
   props: {
     labels: Array, // [{id: Integer, color: String, text: String}]
     text: String,
-    entityPositions: Array, // [{'startOffset': 10, 'endOffset': 15, 'label_id': 1}]
+    entityPositions: Array, // [{'startOffset': 10, 'endOffset': 15, 'label_id': 1}],
+    sentenceLabeling: Boolean
   },
   data() {
     return {
       startOffset: 0,
       endOffset: 0,
+      currentSelection: null
     };
   },
 
+  mounted () {
+    document.addEventListener('selectionchange', this.selectionChange.bind(this))
+    const splited = this.text.split('\n')
+    const acc = []
+    this.sentences = splited.reduce((acc, current) => {
+      let offset = 0
+      if (acc.length) {
+        const last = acc[acc.length - 1]
+        offset = last.end_offset + 1
+      }
+
+      acc.push({
+        start_offset: offset,
+        end_offset: current.length + offset
+      })
+
+      return acc
+    }, acc);
+  },
+
+  destroy () {
+    document.addEventListener('selectionchange', this.selectionChange.bind(this))
+  },
+
   methods: {
+    selectionChange () {
+      const selection = document.getSelection()
+      if (this.$el.contains(selection.focusNode)) {
+        this.currentSelection = selection
+        this.setSelectedRange()
+      }
+    },
     setSelectedRange(e) {
       let start;
       let end;
@@ -53,7 +88,6 @@ Vue.component('annotator', {
       }
       this.startOffset = start;
       this.endOffset = end;
-      console.log(start, end);
     },
 
     validRange() {
@@ -66,7 +100,7 @@ Vue.component('annotator', {
       if (this.startOffset < 0 || this.endOffset < 0) {
         return false;
       }
-      /*
+
       for (let i = 0; i < this.entityPositions.length; i++) {
         const e = this.entityPositions[i];
         if ((e.start_offset <= this.startOffset) && (this.startOffset < e.end_offset)) {
@@ -82,7 +116,31 @@ Vue.component('annotator', {
           return false;
         }
       }
-      */
+
+      if (this.sentenceLabeling) {
+        let validStart = false
+        let validEnd = false
+        this.sentences.forEach((s) => {
+          if (s.start_offset === this.startOffset) {
+            validStart = true
+          }
+
+          if (s.end_offset === this.endOffset) {
+            validEnd = true
+          }
+        })
+
+        if (!validStart || !validEnd) {
+          bulmaToast.toast({
+            message: 'You can label only full sentences',
+            type: 'is-warning',
+            position: 'top-center',
+          });
+        }
+
+        return validStart && validEnd
+      }
+
       return true;
     },
 
