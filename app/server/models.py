@@ -28,6 +28,7 @@ class Project(models.Model):
     enable_metadata_search = models.BooleanField(default=False)
     show_ml_model_prediction = models.BooleanField(default=False)
     shuffle_documents = models.BooleanField(default=False)
+    sentence_labeling = models.BooleanField(default=True)
 
     def __init__(self, *args, **kwargs):
         super(Project,self).__init__(*args, **kwargs)

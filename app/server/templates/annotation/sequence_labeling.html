@@ -2,7 +2,7 @@
 {% load static %}
 {% block annotation-area %}
 <div class="card">
-  <header class="card-header">
+  <header class="card-header sequence-labeling-header">
     <div class="card-header-title has-background-royalblue" style="padding:1.5rem;">
       <div class="field is-grouped is-grouped-multiline">
         <div class="control" v-for="label in labels">
@@ -19,7 +19,7 @@
   </header>
   <div class="card-content">
     <div class="content" v-if="docs[pageNumber] && annotations[pageNumber]">
-      <annotator ref="annotator" v-bind:labels="labels" v-bind:entity-positions="annotations[pageNumber]" v-bind:text="docs[pageNumber].text"
+      <annotator ref="annotator" v-bind:labels="labels" v-bind:entity-positions="annotations[pageNumber]" v-bind:text="docs[pageNumber].text" :sentence-labeling="sentenceLabeling"
         @remove-label="removeLabel" @add-label="addLabel"></annotator>
     </div>
   </div>

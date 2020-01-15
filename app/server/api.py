@@ -648,21 +648,30 @@ class DocumentLabelersAPI(generics.RetrieveUpdateDestroyAPIView):
         return Response(response)
 
 
-class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
+class ProjectDetails(generics.RetrieveUpdateDestroyAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUser)
+    lookup_url_kwarg = 'project_id'
 
-    def get_queryset(self):
+    @action(methods=['get'], detail=True)
+    def progress(self, request, pk=None):
+        project = self.get_object()
+        return Response(project.get_progress(self.request.user))
+
+
+class ProjectList(generics.ListCreateAPIView):
+    queryset = Project.objects.all().order_by('-updated_at')
+    serializer_class = ProjectListSerializer
+    pagination_class = None
+    permission_classes = (IsAuthenticated, IsAdminUserAndWriteOnly)
+
+class ProjectProgressAPI(APIView):
+    pagination_class = None
+    permission_classes = (IsAuthenticated, IsAdminUserAndWriteOnly)
+    def get(self, request, *args, **kwargs):
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])
-        queryset = self.queryset.filter(project.id)
-        return queryset
-
-
-class ProjectsDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
-    permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUser)
+        return Response(project.get_progress(self.request.user))
 
 
 class LabelDetail(generics.RetrieveUpdateDestroyAPIView):
