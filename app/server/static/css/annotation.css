@@ -153,6 +153,11 @@ body {
 .content .text-sequence {
   white-space: normal; /* Not render newlines for sequence labelling */
   height: auto;
+  font-family: Consolas, monospace;
+}
+
+.content .text-sequence--sentence {
+  white-space: pre-wrap;
 }
 
 :focus {
@@ -333,4 +338,10 @@ span.has-background-danger > span.highlight {
 }
 a.card-header-icon {
     display: none;
+}
+
+.sequence-labeling-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }

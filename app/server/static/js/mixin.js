@@ -217,7 +217,8 @@ const annotationMixin = {
       docFromLink: null,
       showLabelers: false,
       labelers: [],
-      preventLabeling: false
+      preventLabeling: false,
+      sentenceLabeling: true
     };
   },
 
@@ -497,6 +498,7 @@ const annotationMixin = {
     });
     HTTP.get().then((response) => {
       this.guideline = response.data.guideline;
+      this.sentenceLabeling = response.data.sentence_labeling
     });
     HTTP.get('metadata').then((response) => {
       response.data.metadata.forEach((m) => {

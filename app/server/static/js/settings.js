@@ -6,17 +6,21 @@ import * as bulmaToast from 'bulma-toast';
 const vm = new Vue({
   el: '#mail-app',
   delimiters: ['[[', ']]'],
-  data: {
-    projectSettings: {
+  data() {
+    return {
+      projectSettings: {
         use_machine_model_sort: false,
         show_ml_model_prediction: false,
         enable_metadata_search: false,
         shuffle_documents: false,
         name: '',
         description: '',
-        users: []
-    },
-    users: []
+        users: [],
+        sentence_labeling: true
+      },
+      projectType: '',
+      users: []
+    }
   },
 
   methods: {
@@ -39,6 +43,7 @@ const vm = new Vue({
   async created() {
     const project = await HTTP.get('')
     this.setProjectSettings(project.data);
+    this.projectType = project.data.project_type
 
     const users = await HTTP.get('users');
     this.users = users.data;
