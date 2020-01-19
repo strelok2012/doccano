@@ -118,27 +118,23 @@ Vue.component('annotator', {
       }
 
       if (this.sentenceLabeling) {
-        let validStart = false
-        let validEnd = false
-        this.sentences.forEach((s) => {
-          if (s.start_offset === this.startOffset) {
-            validStart = true
+        for (let i = 0; i < this.sentences.length; i++) {
+          const s = this.sentences[i]
+          if (i > 0) {
+            const prev = this.sentences[i - 1]
+            if (this.endOffset === s.start_offset) {
+              this.endOffset = prev.end_offset
+            }
+          }
+          
+          if (this.startOffset >= s.start_offset && this.startOffset <= s.end_offset) {
+            this.startOffset = s.start_offset
           }
 
-          if (s.end_offset === this.endOffset) {
-            validEnd = true
+          if (this.endOffset >= s.start_offset && this.endOffset <= s.end_offset) {
+            this.endOffset = s.end_offset
           }
-        })
-
-        if (!validStart || !validEnd) {
-          bulmaToast.toast({
-            message: 'You can label only full sentences',
-            type: 'is-warning',
-            position: 'top-center',
-          });
         }
-
-        return validStart && validEnd
       }
 
       return true;
@@ -199,8 +195,6 @@ Vue.component('annotator', {
       }
       const l = this.makeLabel(left, this.text.length);
       res.push(l);
-
-      console.log('chunks', res)
 
       return res;
     },
