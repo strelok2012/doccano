@@ -34,6 +34,7 @@ SECRET_KEY = os.environ.get(
 # DEBUG = False
 DEBUG = True
 if os.environ.get('DOCCANO_DEBUG') == 'False':
+    print('DEBUG FALSe')
     DEBUG = False
 
 DEBUG_PROPAGATE_EXCEPTIONS = True
@@ -147,8 +148,8 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     },
 }
-DATABASES['default'] = DATABASES['posgres']
-# DATABASES['default'] = DATABASES['posgres_local']
+# DATABASES['default'] = DATABASES['posgres']
+DATABASES['default'] = DATABASES['posgres_local']
 
 if "test" in sys.argv:
     DATABASES = {    
