@@ -31,7 +31,7 @@
           <div class="column is-12 tabs">
             <ul>
               <li :class="{'is-active' : activeTab == 1}" @click="setTab(1)"><a>Upload from computer</a></li>
-              <li :class="{'is-active' : activeTab == 2}" @click="setTab(2)"><a>Upload by URL</a></li>
+              <li :class="{'is-active' : activeTab == 2}" @click="setTab(2)"><a>Upload by URL/S3</a></li>
             </ul>
           </div>
           <div class="column is-12 tabs-content">
@@ -79,12 +79,12 @@
                     </div>
                     <div class="field is-horizontal">
                       <div class="field-label is-normal">
-                        <label class="label">URL</label>
+                        <label class="label">URL/S3</label>
                       </div>
                       <div class="field-body">
                         <div class="field">
                           <p class="control">
-                            <input class="input" type="text" name="url" v-model="inputUrl" placeholder="https://example.com/tet.csv">
+                            <input class="input" type="text" name="url" v-model="inputUrl" placeholder="https://example.com/test.csv or s3://test-bucket/test.csv">
                           </p>
                         </div>
                       </div>
