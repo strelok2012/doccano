@@ -617,9 +617,9 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
         try:
             if (request.POST['url']):
                 url = request.POST['url']
-                if url[0:4] == 's3://' :
+                if url[0:5] == 's3://' :
                     s3 = s3fs.S3FileSystem(anon=False)
-                    file = s3.open(request.POST['url'], 'rb')
+                    file = s3.open(request.POST['url'].replace('s3://', ''), 'rb')
                 else:
                     r = requests.get(url)
                     file = BytesIO(r.content)
