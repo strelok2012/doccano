@@ -35,25 +35,8 @@ Vue.component('annotator', {
       currentSelection: null
     };
   },
-
   mounted () {
     document.addEventListener('selectionchange', this.selectionChange.bind(this))
-    const splited = this.text.split('\n')
-    const acc = []
-    this.sentences = splited.reduce((acc, current) => {
-      let offset = 0
-      if (acc.length) {
-        const last = acc[acc.length - 1]
-        offset = last.end_offset + 1
-      }
-
-      acc.push({
-        start_offset: offset,
-        end_offset: current.length + offset
-      })
-
-      return acc
-    }, acc);
   },
 
   destroy () {
@@ -168,7 +151,7 @@ Vue.component('annotator', {
         end_offset: endOffset,
       };
       return label;
-    },
+    }
   },
 
   watch: {
@@ -181,6 +164,25 @@ Vue.component('annotator', {
     sortedEntityPositions() {
       this.entityPositions = this.entityPositions.sort((a, b) => a.start_offset - b.start_offset);
       return this.entityPositions;
+    },
+
+    sentences() {
+      const splited = this.text.split('\n')
+      const acc = []
+      return splited.reduce((acc, current) => {
+        let offset = 0
+        if (acc.length) {
+          const last = acc[acc.length - 1]
+          offset = last.end_offset + 1
+        }
+
+        acc.push({
+          start_offset: offset,
+          end_offset: current.length + offset
+        })
+
+        return acc
+      }, acc);
     },
 
     chunks() {
