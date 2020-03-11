@@ -399,7 +399,7 @@ const annotationMixin = {
     removeLabel(annotation) {
       const docId = this.docs[this.pageNumber].id;
       HTTP.delete(`docs/${docId}/annotations/${annotation.id}`).then((response) => {
-        const index = this.annotations[this.pageNumber].indexOf(annotation);
+        const index = this.annotations[this.pageNumber].findIndex(a => a.id === annotation.id);
         this.annotations[this.pageNumber].splice(index, 1);
       });
     },

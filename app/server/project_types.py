@@ -13,6 +13,16 @@ project_types = {
         'active_learning_function': text_classifier_function
     },
 
+    'SequenceLabelingAlt': {
+        'title': 'sequence labeling Alt',
+        'type': 'SequenceLabelingAlt',
+        # 'image': staticfiles_storage.url('images/cat-3449999_640.jpg'),
+        'template_html': 'annotation/sequence_labeling_alt.html',
+        'document_serializer': '',
+        'annotations_serializer': '',
+    },
+
+
     'SequenceLabeling': {
         'title': 'sequence labeling',
         'type': 'SequenceLabeling',
