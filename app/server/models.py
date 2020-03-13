@@ -1,7 +1,7 @@
 import json
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.urls import reverse
 from django.contrib.auth.models import User
 from .utils import get_key_choices
@@ -118,15 +118,15 @@ class Project(models.Model):
         if not user:
             return docs
 
-        return docs.filter(**self.get_documents_kwargs(user)).order_by(self.get_annotated_ordering())
+        return docs.filter(**self.get_documents_kwargs(user)).order_by(self.get_annotated_ordering()).annotate(id_count=Count('id'))
     
     def get_all_documents(self, user):
         docs = self.documents.filter(project=self.pk)
         if not user:
             return docs
         
-        annotated = docs.filter(**self.get_documents_kwargs(user)).order_by(self.get_annotated_ordering())
-        unannotated = docs.exclude(**self.get_documents_kwargs(user))
+        annotated = docs.filter(**self.get_documents_kwargs(user)).order_by(self.get_annotated_ordering()).annotate(id_count=Count('id'))
+        unannotated = docs.exclude(**self.get_documents_kwargs(user)).annotate(id_count=Count('id'))
 
         return unannotated.union(annotated, all=True)
 
