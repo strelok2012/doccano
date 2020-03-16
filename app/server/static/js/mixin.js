@@ -1,5 +1,11 @@
 import HTTP from './http';
 import Vue from 'vue';
+import VueSweetalert2 from 'vue-sweetalert2';
+ 
+// If you don't need the styles, do not connect
+import 'sweetalert2/dist/sweetalert2.min.css';
+
+Vue.use(VueSweetalert2)
 
 Vue.component('metadata-search', {
   props: ['metadata'],
@@ -444,6 +450,40 @@ const annotationMixin = {
     async metadataSearch(rules) {
       this.metadataRules = rules
       await this.submit()
+    },
+
+    setDocument (index) {
+      if (this.toDelete || this.toAdd) {
+        if (this.toDelete.length || this.toAdd.length) {
+          this.$swal({
+            title: 'Warning',
+            text: 'You have unsaved chandes. Proceed?',
+            type: 'warning',
+            showCancelButton: true
+          }).then(async (result) => {
+            if (result.value) {
+              this.toDelete.forEach((td) => {
+                if (Number.isInteger(td.id)) {
+                  this.annotations[this.pageNumber].push(td)
+                }
+              })
+              this.toAdd.forEach((ta) => {
+                if (!Number.isInteger(ta.id)) {
+                  const idx = this.annotations[this.pageNumber].findIndex(a => a.id === ta.id)
+                  this.annotations[this.pageNumber].splice(idx, 1)
+                }
+              })
+              this.pageNumber = index
+              this.toAdd = []
+              this.toDelete = []
+            }
+          })
+        } else {
+          this.pageNumber = index
+        }
+      } else {
+        this.pageNumber = index
+      }
     }
   },
 

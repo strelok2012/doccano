@@ -35,7 +35,9 @@ SECRET_KEY = os.environ.get(
 DEBUG = True
 if os.environ.get('DOCCANO_DEBUG') == 'False':
     print('DEBUG FALSe')
-    DEBUG = False
+    DEBUG = True
+
+print('DEBUG IS', DEBUG)
 
 DEBUG_PROPAGATE_EXCEPTIONS = True
 
@@ -98,7 +100,7 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'server/static'),
 ]
 
-STATICFILES_STORAGE = 'app.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 WSGI_APPLICATION = 'app.wsgi.application'
 

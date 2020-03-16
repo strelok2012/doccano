@@ -116,7 +116,7 @@
       </div>
 
       <div class="main">
-        <a class="item" v-for="(doc, index) in docs" v-bind:class="{ active: index == pageNumber }" v-on:click="pageNumber = index"
+        <a class="item" v-for="(doc, index) in docs" v-bind:class="{ active: index == pageNumber }" v-on:click="setDocument(index)"
           v-bind:data-preview-id="index"
           :key="index">
           <span class="icon">
@@ -147,17 +147,22 @@
       <div class="column is-3">
         <progress class="progress is-inline-block" v-bind:class="progressColor" v-bind:value="achievement" max="100">30%</progress>
       </div>
-      <div class="column is-4">
+      <div class="column is-2">
         <span class="ml10" title="documents annotated"><strong>[[ total - remaining ]]</strong></span>/<span title="total documents">[[ total ]]</span>
       </div>
-      <div class="column is-4">
+      <div class="column is-3">
         <div class="field" title="Highlight words and phrases that contribute the most to the prediction of the machine">
           <input id="switchExample" type="checkbox" name="switchExample" class="switch is-success" v-model="explainMode" checked="checked">
           <label for="switchExample">Explain mode</label>
         </div>
       </div>
+      <div v-if="toDelete || toAdd" class="column is-2">
+        <a class="button is-success" @click="approve" title="Approve" :disabled="!toDelete.length && !toAdd.length">
+          Approve
+        </a>
+      </div>
       <div class="column is-1 has-text-right">
-        <a class="button" @click="isActive=!isActive" title="Annotation guidelines">
+        <a class="button button" @click="isActive=!isActive" title="Annotation guidelines">
           <span class="icon">
             <i class="fas fa-book"></i>
           </span>

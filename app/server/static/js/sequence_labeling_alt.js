@@ -60,6 +60,8 @@ Vue.component('annotator', {
   },
   mounted () {
     document.addEventListener('selectionchange', this.selectionChange.bind(this))
+
+    this.$emit('entity-positions-change', this.entityPositions)
   },
 
   destroy () {
@@ -180,14 +182,18 @@ Vue.component('annotator', {
   },
 
   watch: {
-    entityPositions() {
+    entityPositions(val) {
       this.resetRange();
+      this.$emit('entity-positions-change', val)
     },
   },
 
   computed: {
     sortedEntityPositions() {
       const ret = this.entityPositions.map((ep) => {
+        if (ep.start_offset || ep.end_offset) {
+          return ep
+        }
         return transformAnnotation(ep)
       }).sort((a, b) => a.start_offset - b.start_offset)
       return ret;
@@ -244,20 +250,74 @@ Vue.component('annotator', {
   },
 });
 
+const uuidv4 = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
+
 const vm = new Vue({
   el: '#mail-app',
   delimiters: ['[[', ']]'],
   mixins: [annotationMixin],
+  data () {
+    return {
+      toDelete: [],
+      toAdd: [],
+      originalAnnotations: null
+    }
+  },
   methods: {
     annotate(labelId) {
       this.$refs.annotator.addLabel(labelId);
     },
 
     addLabel(annotation) {
-      const docId = this.docs[this.pageNumber].id;
-      HTTP.post(`docs/${docId}/annotations/`, annotation).then((response) => {
-        this.annotations[this.pageNumber].push(response.data);
-      });
+      annotation.id = uuidv4()
+      this.annotations[this.pageNumber].push(annotation)
+      this.toAdd.push(annotation)
     },
-  },
+
+    removeLabel(annotation) {
+      const index = this.annotations[this.pageNumber].findIndex(a => a.id === annotation.id)
+      this.annotations[this.pageNumber].splice(index, 1)
+      if (Number.isInteger(annotation.id)) {
+        this.toDelete.push(annotation)
+      } else {
+        const toAddIndex = this.toAdd.findIndex(a => a.id === annotation.id)
+        this.toAdd.splice(toAddIndex, 1)
+      }
+    },
+
+    async approve () {
+      if (this.toAdd.length || this.toDelete.length) {
+        const docId = this.docs[this.pageNumber].id
+
+        for (let i = 0; i < this.toAdd.length; i++) {
+          const a = this.toAdd[i]
+          delete a.id
+          await HTTP.post(`docs/${docId}/annotations/`, a)
+        }
+
+        this.toAdd = []
+
+        for (let i = 0; i < this.toDelete.length; i++) {
+          const a = this.toDelete[i]
+          await HTTP.delete(`docs/${docId}/annotations/${a.id}`)
+        }
+
+        this.toDelete = []
+
+        bulmaToast.toast({
+          message: `Successfully saved.`,
+          type: 'is-success',
+          position: 'top-center'
+        });
+      }
+    },
+
+    entityPositionsChange (val) {
+    }
+  }
 });
