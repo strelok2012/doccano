@@ -97,7 +97,7 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'server/static'),
 ]
 
-STATICFILES_STORAGE = 'app.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
