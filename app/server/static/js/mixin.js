@@ -198,6 +198,8 @@ const annotationMixin = {
       pageNumber: 0,
       docs: [],
       annotations: [],
+      mlAnnotations: [],
+      currentAnnotations: [],
       labels: [],
       guideline: '',
       total: 0,
@@ -224,7 +226,8 @@ const annotationMixin = {
       showLabelers: false,
       labelers: [],
       preventLabeling: false,
-      sentenceLabeling: true
+      sentenceLabeling: true,
+      mlMode: false
     };
   },
 
@@ -315,9 +318,11 @@ const annotationMixin = {
         
         
         this.annotations = [];
+        this.mlAnnotations = []
         for (let i = 0; i < this.docs.length; i++) {
           const doc = this.docs[i];
           this.annotations.push(doc.annotations);
+          this.mlAnnotations.push(doc.mlm_annotations);
         }
         
         if (setOffset) {
@@ -457,7 +462,7 @@ const annotationMixin = {
         if (this.toDelete.length || this.toAdd.length) {
           this.$swal({
             title: 'Warning',
-            text: 'You have unsaved chandes. Proceed?',
+            text: 'You have unsaved changes. Proceed?',
             type: 'warning',
             showCancelButton: true
           }).then(async (result) => {
@@ -483,6 +488,18 @@ const annotationMixin = {
         }
       } else {
         this.pageNumber = index
+      }
+    },
+
+    rebuildCurrentAnnotations (val) {
+      this.mlMode = false
+      if (this.annotations && this.annotations[val] && this.annotations[val].length) {
+        this.currentAnnotations = this.annotations[val]
+      } else if (this.mlAnnotations && this.mlAnnotations[val] && this.mlAnnotations[val].length) {
+        this.currentAnnotations = this.mlAnnotations[val]
+        this.mlMode = true
+      } else {
+        this.currentAnnotations = []
       }
     }
   },
@@ -522,6 +539,8 @@ const annotationMixin = {
           this.getLabelers(doc.id)
         }
       }
+      
+      this.rebuildCurrentAnnotations(val)
     }
   },
 
@@ -576,6 +595,8 @@ const annotationMixin = {
       const doc = this.docs[0]
       this.getExplanation(doc.id)
     }
+
+    this.rebuildCurrentAnnotations(0)
 
     if (document.getElementById('labelersCard')) {
       this.showLabelers = true

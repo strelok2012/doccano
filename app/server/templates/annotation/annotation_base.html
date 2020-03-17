@@ -157,8 +157,8 @@
         </div>
       </div>
       <div v-if="toDelete || toAdd" class="column is-2">
-        <a class="button is-success" @click="approve" title="Approve" :disabled="!toDelete.length && !toAdd.length">
-          Approve
+        <a class="button is-success" @click="approve" title="Approve" :disabled="approveDisabled">
+          [[ mlMode ? 'Approve' : 'Approve' ]]
         </a>
       </div>
       <div class="column is-1 has-text-right">

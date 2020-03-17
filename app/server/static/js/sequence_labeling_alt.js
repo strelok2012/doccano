@@ -111,17 +111,23 @@ Vue.component('annotator', {
 
       for (let i = 0; i < this.entityPositions.length; i++) {
         const e = this.entityPositions[i];
-        if ((e.start_offset <= this.startOffset) && (this.startOffset < e.end_offset)) {
-          return false;
-        }
-        if ((e.start_offset < this.endOffset) && (this.endOffset < e.end_offset)) {
-          return false;
-        }
-        if ((this.startOffset < e.start_offset) && (e.start_offset < this.endOffset)) {
-          return false;
-        }
-        if ((this.startOffset < e.end_offset) && (e.end_offset < this.endOffset)) {
-          return false;
+        try {
+          const data = JSON.parse(e.additional_data)
+          const start_offset = data.start_offset
+          const end_offset = data.end_offset
+          if ((start_offset <= this.startOffset) && (this.startOffset < end_offset)) {
+            return false;
+          }
+          if ((start_offset < this.endOffset) && (this.endOffset < end_offset)) {
+            return false;
+          }
+          if ((this.startOffset < start_offset) && (start_offset < this.endOffset)) {
+            return false;
+          }
+          if ((this.startOffset < end_offset) && (end_offset < this.endOffset)) {
+            return false;
+          }
+        } catch(e) {
         }
       }
 
@@ -268,6 +274,14 @@ const vm = new Vue({
       originalAnnotations: null
     }
   },
+  computed: {
+    approveDisabled () {
+      if (this.mlMode) {
+        return !this.currentAnnotations.length
+      }
+      return !this.toDelete.length && !this.toAdd.length
+    }
+  },
   methods: {
     annotate(labelId) {
       this.$refs.annotator.addLabel(labelId);
@@ -275,13 +289,13 @@ const vm = new Vue({
 
     addLabel(annotation) {
       annotation.id = uuidv4()
-      this.annotations[this.pageNumber].push(annotation)
+      this.currentAnnotations.push(annotation)
       this.toAdd.push(annotation)
     },
 
     removeLabel(annotation) {
-      const index = this.annotations[this.pageNumber].findIndex(a => a.id === annotation.id)
-      this.annotations[this.pageNumber].splice(index, 1)
+      const index = this.currentAnnotations.findIndex(a => a.id === annotation.id)
+      this.currentAnnotations.splice(index, 1)
       if (Number.isInteger(annotation.id)) {
         this.toDelete.push(annotation)
       } else {
@@ -291,30 +305,43 @@ const vm = new Vue({
     },
 
     async approve () {
-      if (this.toAdd.length || this.toDelete.length) {
-        const docId = this.docs[this.pageNumber].id
+      const docId = this.docs[this.pageNumber].id
 
-        for (let i = 0; i < this.toAdd.length; i++) {
-          const a = this.toAdd[i]
-          delete a.id
-          await HTTP.post(`docs/${docId}/annotations/`, a)
+      if (this.mlMode) {        
+        for (let i = 0; i < this.currentAnnotations.length; i++) {
+          const a = this.currentAnnotations[i]
+          const res = await HTTP.post(`docs/${docId}/annotations/`, a)
+          this.annotations[this.pageNumber].push(res.data)
         }
 
         this.toAdd = []
-
-        for (let i = 0; i < this.toDelete.length; i++) {
-          const a = this.toDelete[i]
-          await HTTP.delete(`docs/${docId}/annotations/${a.id}`)
-        }
-
         this.toDelete = []
 
-        bulmaToast.toast({
-          message: `Successfully saved.`,
-          type: 'is-success',
-          position: 'top-center'
-        });
+        this.rebuildCurrentAnnotations(this.pageNumber)
+      } else {
+        if (this.toAdd.length || this.toDelete.length) {
+          for (let i = 0; i < this.toAdd.length; i++) {
+            const a = this.toAdd[i]
+            const res = await HTTP.post(`docs/${docId}/annotations/`, a)
+            this.annotations[this.pageNumber].push(res.data)
+          }
+  
+          this.toAdd = []
+  
+          for (let i = 0; i < this.toDelete.length; i++) {
+            const a = this.toDelete[i]
+            await HTTP.delete(`docs/${docId}/annotations/${a.id}`)
+          }
+  
+          this.toDelete = []
+        }
       }
+
+      bulmaToast.toast({
+        message: `Successfully saved.`,
+        type: 'is-success',
+        position: 'top-center'
+      });
     },
 
     entityPositionsChange (val) {

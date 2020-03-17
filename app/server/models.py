@@ -472,6 +472,7 @@ class AnnotationExternal(models.Model):
     prob = models.FloatField(null=True, blank=True, default=None)
     created_date_time = models.DateTimeField(auto_now_add=True)
     updated_date_time = models.DateTimeField(auto_now=True)
+    additional_data = models.TextField(default='{}')
 
     class Meta:
         abstract = True
@@ -492,14 +493,14 @@ class DocumentMLMAnnotation(AnnotationExternal):
     label = models.ForeignKey(Label, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('document', 'label')
+        unique_together = ('document', 'label', 'additional_data')
 
 class DocumentGoldAnnotation(AnnotationExternal):
     document = models.ForeignKey(Document, related_name='doc_gold_annotations', on_delete=models.CASCADE)
     label = models.ForeignKey(Label, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('document', 'label')
+        unique_together = ('document', 'label', 'additional_data')
 
 
 class SequenceAnnotation(Annotation):
