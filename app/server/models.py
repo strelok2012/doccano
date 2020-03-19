@@ -81,22 +81,24 @@ class Project(models.Model):
             docs = docs.filter(doc_annotations__isnull=False)
         return docs
 
-    def get_documents_kwargs(self, user, label=None):
+    def get_documents_kwargs(self, user, labels=None):
         ret = {}
         if not user:
             return ret
+        if (labels):
+            labels = labels.split(',')
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
-            ret[ "doc_annotations__user"] = user
-            if (label):
-                ret[ "doc_annotations__label"] = label
+            ret["doc_annotations__user"] = user
+            if (labels):
+                ret[ "doc_annotations__label__in"] = labels
         elif self.is_type_of(Project.SEQUENCE_LABELING):
-            ret[ "seq_annotations__user"] = user
-            if (label):
-                ret[ "seq_annotations__label"] = label
+            ret["seq_annotations__user"] = user
+            if (labels):
+                ret[ "seq_annotations__label__in"] = labels
         elif self.is_type_of(Project.Seq2seq):
-            ret[ "seq_annotations__user"] = user
-            if (label):
-                ret[ "seq_annotations__label"] = label
+            ret["seq_annotations__user"] = user
+            if (labels):
+                ret[ "seq_annotations__label__in"] = labels
         else:
             print('Project type: '+self.project_type)
             raise ValueError('Invalid project_type')
@@ -122,12 +124,12 @@ class Project(models.Model):
 
         return order
     
-    def get_annotated_documents(self, user, label=None):
+    def get_annotated_documents(self, user, labels=None):
         docs = self.documents.filter(project=self.pk)
         if not user:
             return docs
 
-        return docs.filter(**self.get_documents_kwargs(user, label)).order_by(self.get_annotated_ordering()).annotate(id_count=Count('id'))
+        return docs.filter(**self.get_documents_kwargs(user, labels)).order_by(self.get_annotated_ordering()).annotate(id_count=Count('id'))
     
     def get_all_documents(self, user):
         docs = self.documents.filter(project=self.pk)
