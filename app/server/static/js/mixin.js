@@ -364,7 +364,12 @@ const annotationMixin = {
       if (this.picked === 'active') {
         return 'true';
       }
-      return 'false';
+
+      if (this.picked === 'completed') {
+        return 'false'
+      }
+
+      return this.picked
     },
 
     async submit() {
