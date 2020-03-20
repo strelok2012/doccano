@@ -375,6 +375,13 @@ a.card-header-icon {
   position: relative;
 }
 
+.sentence-labeling__conversation {
+  -webkit-user-select: none; /* Safari */        
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+  user-select: none; /* Standard */
+}
+
 .sentence-labeling__text--empty {
   -webkit-user-select: none; /* Safari */        
   -moz-user-select: none; /* Firefox */
