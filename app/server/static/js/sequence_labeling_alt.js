@@ -3,8 +3,8 @@ import * as bulmaToast from 'bulma-toast';
 
 import annotationMixin from './mixin';
 
-import annotation from './components/annotation'
-import annotator from './components/annotator'
+import SentenceAnnotator from './components/SentenceAnnotator'
+import TextAnnotator from './components/TextAnnotator'
 
 import HTTP from './http';
 import simpleShortcut from './filter';
@@ -17,10 +17,6 @@ Vue.use(require('vue-shortkey'), {
 
 Vue.filter('simpleShortcut', simpleShortcut);
 
-Vue.component('annotation', annotation)
-
-Vue.component('annotator', annotator);
-
 const vm = new Vue({
   el: '#mail-app',
   delimiters: ['[[', ']]'],
@@ -30,6 +26,10 @@ const vm = new Vue({
       toDelete: [],
       toAdd: []
     }
+  },
+  components: {
+    SentenceAnnotator,
+    TextAnnotator
   },
   computed: {
     approveDisabled () {
