@@ -67,3 +67,7 @@ export const transformAnnotation = (a) => {
       return v.toString(16)
     })
   }
+
+  export const inRange = (number, rangeStart, rangeEnd) => {
+    return number >= rangeStart && number <= rangeEnd
+  }

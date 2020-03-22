@@ -1,45 +1,15 @@
 <template>
     <div style="position: relative">
-      <span class="text-sequence"
-              v-for="(r, index) in chunks"
-              :key="index"
-              v-if="id2label[r.label]"
-              v-bind:class="{tag: id2label[r.label].text_color}"
-              v-bind:style="{ color: id2label[r.label].text_color, backgroundColor: id2label[r.label].background_color }"
-      >{{ text.slice(r.start_offset, r.end_offset) }}<button class="delete is-small"
-                              v-if="id2label[r.label].text_color"
-                              @click="removeLabel(r)"></button></span>
-      {{ chunks }}
+      <TextAnnotation v-for="(r, index) in chunks" :element="r" :key="index" :labels="id2label" :text="text" @remove-label="removeLabel"/>
     </div>
 </template>
 
 <script>
-import { transformAnnotation, getRangeSelectedNodes } from '../utils'
+import TextAnnotation from './TextAnnotation'
+
+import { transformAnnotation, getRangeSelectedNodes, inRange } from '../utils'
 
 const added = []
-
-const processEp = (position, entityPositions) => {
-  const ret = { ...position, childs: [] }
-  entityPositions.filter((ep) => ep.start_offset >= position.start_offset && ep.end_offset <= position.end_offset && ep.id !== position.id).forEach(ep => {
-    if (!added.includes(ep.id)) {
-      ret.childs.push(processEp(ep, entityPositions))
-      added.push(ep.id)
-    }
-  })
-
-  return ret
-}
-
-const chunkTree = (entityPositions) => {
-  const ret = []
-  entityPositions.forEach(ep => {
-    if (!added.includes(ep.id)) {
-      ret.push(processEp(ep, entityPositions))
-      added.push(ep.id)
-    }
-  })
-  return ret
-}
 
 export default {
     props: {
@@ -47,11 +17,15 @@ export default {
       text: String,
       entityPositions: Array
     },
+    components: {
+      TextAnnotation
+    },
     data() {
       return {
         startOffset: 0,
         endOffset: 0,
-        currentSelection: null
+        currentSelection: null,
+        added: []
       };
     },
     mounted () {
@@ -81,7 +55,8 @@ export default {
           const preSelectionRange = range.cloneRange();
           preSelectionRange.selectNodeContents(this.$el);
           preSelectionRange.setEnd(range.startContainer, range.startOffset);
-          start = preSelectionRange.toString().length;
+          const preselectionText = preSelectionRange.toString().split('\n').map((t, idx, arr) => idx !== arr.length - 1 ? t.trimRight() : t).filter(t => t.length).join('')
+          start = preselectionText.length;
           end = start + range.toString().length;
         } else if (document.selection && document.selection.type !== 'Control') {
           const selectedTextRange = document.selection.createRange();
@@ -91,11 +66,12 @@ export default {
           start = preSelectionTextRange.text.length;
           end = start + selectedTextRange.text.length;
         }
+
         this.startOffset = start;
         this.endOffset = end; 
       },
   
-      validRange() {
+      validRange(labelId) {
         if (this.startOffset === this.endOffset) {
           return false;
         }
@@ -105,6 +81,32 @@ export default {
         if (this.startOffset < 0 || this.endOffset < 0) {
           return false;
         }
+
+        const findMinEntityPosition = () => {
+          return this.sortedEntityPositions.filter(ep => {
+            return this.startOffset >= ep.start_offset && this.endOffset <= ep.end_offset
+          }).sort((a, b) => {
+            const aLength = a.end_offset - a.end_offset
+            const bLength = b.end_offset - b.end_offset
+            return aLength - bLength
+          }).pop()
+        }
+
+        /* don't allow to place same label in labeled text */
+        const minEl = findMinEntityPosition()
+        if (minEl && minEl.label === labelId) {
+          return false
+        }
+
+        console.log('minEl', minEl)
+        let crossing = false
+        for (let i = 0; i < this.sortedEntityPositions.length; i++) {
+          const current = this.sortedEntityPositions[i]
+          crossing = crossing || (!inRange(this.startOffset, current.start_offset, current.end_offset) || !inRange(this.endOffset, current.start_offset, current.end_offset))
+        }
+
+        console.log('crossing', crossing)
+
   
         /* for (let i = 0; i < this.entityPositions.length; i++) {
           const e = this.entityPositions[i];
@@ -136,7 +138,7 @@ export default {
       },
   
       addLabel(labelId) {
-        if (this.validRange()) {
+        if (this.validRange(labelId)) {
           const label = {
               additional_data: JSON.stringify({
                 start_offset: this.startOffset,
@@ -161,11 +163,52 @@ export default {
           end_offset: endOffset,
         };
         return label;
+      },
+
+      prepareTree (tree, left, right) {
+        const res = [];
+        for (let i = 0; i < tree.length; i++) {
+          const e = tree[i];
+          const l = this.makeLabel(left, e.start_offset);
+          res.push(l);
+          e.childs = e.childs.length ? this.prepareTree(e.childs, e.childs[0].start_offset, e.end_offset) : []
+          res.push(e);
+          left = e.end_offset;
+        }
+        const l = this.makeLabel(left, right);
+        res.push(l);
+  
+        return res;
+      },
+
+
+      processEp (position)  {
+        const ret = { ...position, childs: [] }
+        this.sortedEntityPositions.filter((ep) => ep.start_offset >= position.start_offset && ep.end_offset <= position.end_offset && ep.id !== position.id).forEach(ep => {
+          if (!this.added.includes(ep.id)) {
+            ret.childs.push(this.processEp(ep, this.sortedEntityPositions))
+            this.added.push(ep.id)
+          }
+        })
+
+        return ret
+      },
+
+      chunkTree () {
+        const ret = []
+        this.sortedEntityPositions.forEach(ep => {
+          if (!this.added.includes(ep.id)) {
+            ret.push(this.processEp(ep, this.sortedEntityPositions))
+            this.added.push(ep.id)
+          }
+        })
+        return ret
       }
     },
   
     watch: {
       entityPositions(val) {
+        this.added = []
         this.resetRange();
         this.$emit('entity-positions-change', val)
       },
@@ -183,21 +226,7 @@ export default {
       },
   
       chunks() {
-        const tree = chunkTree(this.sortedEntityPositions)
-        console.log(tree)
-        const res = [];
-        let left = 0;
-        for (let i = 0; i < this.sortedEntityPositions.length; i++) {
-          const e = this.sortedEntityPositions[i];
-          const l = this.makeLabel(left, e.start_offset);
-          res.push(l);
-          res.push(e);
-          left = e.end_offset;
-        }
-        const l = this.makeLabel(left, this.text.length);
-        res.push(l);
-  
-        return res;
+        return this.prepareTree(this.chunkTree(this.sortedEntityPositions), 0, this.text.length)
       },
   
       id2label() {
