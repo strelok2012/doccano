@@ -9,8 +9,6 @@ import TextAnnotation from './TextAnnotation'
 
 import { transformAnnotation, getRangeSelectedNodes, inRange } from '../utils'
 
-const added = []
-
 export default {
     props: {
       labels: Array, // [{id: Integer, color: String, text: String}]
@@ -55,9 +53,10 @@ export default {
           const preSelectionRange = range.cloneRange();
           preSelectionRange.selectNodeContents(this.$el);
           preSelectionRange.setEnd(range.startContainer, range.startOffset);
-          const preselectionText = preSelectionRange.toString().split('\n').map((t, idx, arr) => idx !== arr.length - 1 ? t.trimRight() : t).filter(t => t.length).join('')
+          const preselectionText = preSelectionRange.toString().split('\n').filter(t => t.trim().length).join('')
+          const rangeString = range.toString().split('\n').filter(t => t.trim().length).join('')
           start = preselectionText.length;
-          end = start + range.toString().length;
+          end = start + rangeString.length;
         } else if (document.selection && document.selection.type !== 'Control') {
           const selectedTextRange = document.selection.createRange();
           const preSelectionTextRange = document.body.createTextRange();
@@ -82,53 +81,32 @@ export default {
           return false;
         }
 
-        const findMinEntityPosition = () => {
-          return this.sortedEntityPositions.filter(ep => {
-            return this.startOffset >= ep.start_offset && this.endOffset <= ep.end_offset
-          }).sort((a, b) => {
-            const aLength = a.end_offset - a.end_offset
-            const bLength = b.end_offset - b.end_offset
-            return aLength - bLength
-          }).pop()
-        }
-
-        /* don't allow to place same label in labeled text */
-        const minEl = findMinEntityPosition()
-        if (minEl && minEl.label === labelId) {
+        if (this.sortedEntityPositions.find(ep => ep.start_offset === this.startOffset)) {
           return false
         }
 
-        console.log('minEl', minEl)
-        let crossing = false
-        for (let i = 0; i < this.sortedEntityPositions.length; i++) {
-          const current = this.sortedEntityPositions[i]
-          crossing = crossing || (!inRange(this.startOffset, current.start_offset, current.end_offset) || !inRange(this.endOffset, current.start_offset, current.end_offset))
+        const startElement = this.sortedEntityPositions.filter(ep => {
+          return this.startOffset > ep.start_offset && this.startOffset < ep.end_offset
+        }).sort((a, b) => {
+          return a.start_offset - b.start_offset
+        }).pop()
+
+        const endElement = this.sortedEntityPositions.filter(ep => {
+          return this.endOffset > ep.start_offset && this.endOffset < ep.end_offset
+        }).sort((a, b) => {
+          return a.start_offset - b.start_offset
+        }).pop()
+
+        /* prevent labels crossing */
+        if (startElement !== endElement) {
+          return false
         }
 
-        console.log('crossing', crossing)
+        /* don't allow to place same label in labeled text */
+        if (startElement && startElement.label === labelId) {
+          return false
+        }
 
-  
-        /* for (let i = 0; i < this.entityPositions.length; i++) {
-          const e = this.entityPositions[i];
-          try {
-            const data = JSON.parse(e.additional_data)
-            const start_offset = data.start_offset
-            const end_offset = data.end_offset
-            if ((start_offset <= this.startOffset) && (this.startOffset < end_offset)) {
-              return false;
-            }
-            if ((start_offset < this.endOffset) && (this.endOffset < end_offset)) {
-              return false;
-            }
-            if ((this.startOffset < start_offset) && (start_offset < this.endOffset)) {
-              return false;
-            }
-            if ((this.startOffset < end_offset) && (end_offset < this.endOffset)) {
-              return false;
-            }
-          } catch(e) {
-          }
-        } */
         return true;
       },
   

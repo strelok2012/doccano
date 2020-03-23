@@ -80,7 +80,8 @@ const vm = new Vue({
           for (let i = 0; i < this.toAdd.length; i++) {
             const a = this.toAdd[i]
             const res = await HTTP.post(`docs/${docId}/annotations/`, a)
-            this.annotations[this.pageNumber].push(res.data)
+            const currentAnnotationIndex = this.annotations[this.pageNumber].findIndex(an => an.id === a.id)
+            this.annotations[this.pageNumber][currentAnnotationIndex] = res.data
           }
   
           this.toAdd = []

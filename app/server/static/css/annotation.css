@@ -160,6 +160,12 @@ body {
   white-space: pre-wrap;
 }
 
+.content .text-sequence.tag {
+  display: inline;
+  padding-left: .25em;
+  padding-right: .25em;
+}
+ 
 :focus {
   outline: 0;
 }
