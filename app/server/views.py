@@ -417,6 +417,86 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
         else:
             return []
 
+    def ml_labeled_csv_to_labels_document_annotation(self, project, file, text_key='text', label_key='label', additional_data_key='additional_data', prob_key='prob'):
+        form_data = TextIOWrapper(file, encoding='utf-8', errors='ignore')
+        dialect = csv.Sniffer().sniff(form_data.read(1024))
+        print('DIALECT', dialect)
+        form_data.seek(0)
+        reader = csv.reader(form_data, dialect)
+
+        maybe_header = next(reader)
+        if maybe_header:
+            if (text_key in maybe_header and label_key in maybe_header and user_key in maybe_header):
+                text_col = maybe_header.index(text_key)
+                label_col = maybe_header.index(label_key)
+                additional_data_col = maybe_header.index(additional_data_key)
+                prob_col = maybe_header.index(prob_key)
+            elif len(maybe_header) == 2:
+                reader = it.chain([maybe_header], reader)
+                text_col = 0
+                label_col = 1
+            elif len(maybe_header) == 3:
+                reader = it.chain([maybe_header], reader)
+                text_col = 0
+                label_col = 1
+                additional_data_col = 2
+            elif len(maybe_header) == 4:
+                reader = it.chain([maybe_header], reader)
+                text_col = 0
+                label_col = 1
+                additional_data_col = 2
+                prob_col = 3
+            else:
+                raise DataUpload.ImportFileError("CSV file must either have a first row with the column titles \"text\", \"label\", or have minimum two columns in that order.")
+            errors = []
+            labels_set = []
+            count = 0
+            for row in reader:
+                if row[text_col]=='':
+                    continue
+                label_obj = Label.objects.filter(text__exact=row[label_col], project=project)
+                if len(label_obj)>1:
+                    errors.append('Found multiple labels with text "{}"'.format(row[label_col]))
+                    continue
+                else:
+                    label_obj = label_obj.first()
+
+                document_obj = Document.objects.filter(text__exact=row[text_col], project=project)
+                if len(document_obj) > 1:
+                    errors.append('Found multiple documents with text "{}"'.format(row[text_col]))
+                    continue
+                else:
+                    document_obj = document_obj.first()
+
+                if (label_obj and document_obj):
+                    new_label = [label_obj, document_obj, '{}', 0]
+                    if len(row) > 2:
+                        new_label[2] = row[2]
+                    
+                    if len(row) > 3:
+                        new_label[3] = row[3]
+
+                    labels_set.append(new_label)
+                else:
+                    if (not label_obj):
+                        errors.append('Label "' + row[label_col] + '" is not found')
+                    if (not document_obj):
+                        errors.append('Document with text "' + row[text_col] + '" is not found')
+            if len(errors):
+                raise DataUpload.ImportFileError('Encoutered {} errors: \n\n{}'.format(len(errors), '\n\n'.join(errors)) )
+
+            return (
+                DocumentMLMAnnotation(
+                    label=label[0],
+                    document=label[1],
+                    additional_data=label[2],
+                    prob=label[3]
+                )
+                for label in labels_set
+            )
+        else:
+            return []
+
     def users_labeled_csv_to_labels_document_annotation(self, project, file, text_key='text', label_key='label', user_key='user'):
         form_data = TextIOWrapper(file, encoding='utf-8', errors='ignore')
         reader = csv.reader(form_data, quotechar='"', delimiter=',',
@@ -592,6 +672,12 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
         else:
             return []
 
+    def ml_labeled_csv_to_labels(self, project, file, text_key='text', label_key='label', additional_data_key='additional_data', prob_key='prob'):
+        if project.is_type_of(Project.DOCUMENT_CLASSIFICATION) or project.is_type_of(Project.SEQUENCE_LABELING_ALT):
+            return self.ml_labeled_csv_to_labels_document_annotation(project, file, text_key, label_key, additional_data_key, prob_key)
+        elif project.is_type_of(Project.SEQUENCE_LABELING):
+            return self.ml_labeled_csv_to_labels_sequence_labeling(project, file)
+
     def users_labeled_csv_to_labels(self, project, file, text_key='text', label_key='label', user_key='user'):
         if project.is_type_of(Project.DOCUMENT_CLASSIFICATION):
             return self.users_labeled_csv_to_labels_document_annotation(project, file, text_key, label_key, user_key)
@@ -629,6 +715,7 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
             documents = []
             true_labels = []
             users_labels = []
+            ml_labels = []
             if import_format == 'csv':
                 documents = self.csv_to_documents(project, file)
             elif import_format == 'json':
@@ -637,6 +724,8 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
                 true_labels = self.labeled_csv_to_labels(project, file)
             elif import_format == "csv_labeled_users":
                 users_labels = self.users_labeled_csv_to_labels(project, file)
+            elif import_format == "csv_labeled_ml":
+                ml_labels = self.ml_labeled_csv_to_labels(project, file)
 
             batch_size = settings.IMPORT_BATCH_SIZE
 
@@ -676,6 +765,21 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
                     
                 url = reverse('dataset', args=[project.id])
                 url += '?users_labels_count=' + str(labels_len)
+                return HttpResponseRedirect(url)
+            elif (import_format == "csv_labeled_ml"):
+                labels_len = 0
+                while True:
+                    batch = list(it.islice(ml_labels, batch_size))
+                    if not batch:
+                        break
+                    labels_len += len(batch)
+                    if project.is_type_of(Project.DOCUMENT_CLASSIFICATION) or project.is_type_of(Project.SEQUENCE_LABELING_ALT):
+                        DocumentMLMAnnotation.objects.bulk_create(batch, batch_size=batch_size)
+                    elif project.is_type_of(Project.SEQUENCE_LABELING):
+                        SequenceAnnotation.objects.bulk_create(batch, batch_size=batch_size)
+                    
+                url = reverse('dataset', args=[project.id])
+                url += '?ml_labels_count=' + str(labels_len)
                 return HttpResponseRedirect(url)
                 
 

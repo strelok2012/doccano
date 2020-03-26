@@ -4,6 +4,7 @@ module.exports = {
     mode: 'development',
     entry: {
         'sequence_labeling': './static/js/sequence_labeling.js',
+        'sequence_labeling_alt': './static/js/sequence_labeling_alt.js',
         'document_classification': './static/js/document_classification.js',
         'seq2seq': './static/js/seq2seq.js',
         'projects': './static/js/projects.js',
