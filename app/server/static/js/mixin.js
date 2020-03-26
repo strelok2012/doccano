@@ -227,6 +227,7 @@ const annotationMixin = {
       labelers: [],
       preventLabeling: false,
       sentenceLabeling: true,
+      pickedLabels: [],
       mlMode: false
     };
   },
@@ -375,7 +376,12 @@ const annotationMixin = {
       if (this.picked === 'active') {
         return 'true';
       }
-      return 'false';
+
+      if (this.picked === 'completed' && !this.pickedLabels.length) {
+        return 'false'
+      }
+
+      return this.pickedLabels.join(',')
     },
 
     async submit() {
@@ -507,6 +513,10 @@ const annotationMixin = {
   watch: {
     picked() {
       this.submit();
+    },
+
+    pickedLabels() {
+      this.submit()
     },
 
     annotations() {
