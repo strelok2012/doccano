@@ -55,7 +55,7 @@ class DocumentAnnotationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DocumentAnnotation
-        fields = ('id', 'prob', 'label')
+        fields = ('id', 'prob', 'label', 'additional_data')
 
     def create(self, validated_data):
         annotation = DocumentAnnotation.objects.create(**validated_data)
@@ -66,7 +66,7 @@ class DocumentMLMAnnotationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DocumentMLMAnnotation
-        fields = ('id', 'prob', 'label')
+        fields = ('id', 'prob', 'label', 'additional_data')
 
     def create(self, validated_data):
         annotation = DocumentMLMAnnotation.objects.create(**validated_data)

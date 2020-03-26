@@ -469,7 +469,7 @@ class ProjectStatsAPI(APIView):
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])
         project_type = Project.project_types[project.project_type]['type']
 
-        if project_type=='DocumentClassification':
+        if project_type=='DocumentClassification' or project_type == 'SequenceLabelingAlt':
             query = """
     SELECT
         server_documentannotation.user_id,

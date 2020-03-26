@@ -34,7 +34,6 @@ SECRET_KEY = os.environ.get(
 # DEBUG = False
 DEBUG = True
 if os.environ.get('DOCCANO_DEBUG') == 'False':
-    print('DEBUG FALSe')
     DEBUG = False
 
 DEBUG_PROPAGATE_EXCEPTIONS = True
