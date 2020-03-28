@@ -135,12 +135,12 @@ body {
 }
 
 .content {
-  font-size: 16pt;
+  font-size: 12pt;
   line-height: 160%;
 }
 
 .content .tag {
-  font-size: 16pt;
+  font-size: 12pt;
   height: 1.5em;
   padding-left: .5em;
   padding-right: .5em;
