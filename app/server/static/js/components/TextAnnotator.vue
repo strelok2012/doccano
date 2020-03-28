@@ -81,18 +81,14 @@ export default {
           return false;
         }
 
-        if (this.sortedEntityPositions.find(ep => ep.start_offset === this.startOffset)) {
-          return false
-        }
-
         const startElement = this.sortedEntityPositions.filter(ep => {
-          return this.startOffset > ep.start_offset && this.startOffset < ep.end_offset
+          return this.startOffset >= ep.start_offset && this.startOffset < ep.end_offset
         }).sort((a, b) => {
           return a.start_offset - b.start_offset
         }).pop()
 
         const endElement = this.sortedEntityPositions.filter(ep => {
-          return this.endOffset > ep.start_offset && this.endOffset < ep.end_offset
+          return this.endOffset > ep.start_offset && this.endOffset <= ep.end_offset
         }).sort((a, b) => {
           return a.start_offset - b.start_offset
         }).pop()
@@ -164,8 +160,8 @@ export default {
         const ret = { ...position, childs: [] }
         this.sortedEntityPositions.filter((ep) => ep.start_offset >= position.start_offset && ep.end_offset <= position.end_offset && ep.id !== position.id).forEach(ep => {
           if (!this.added.includes(ep.id)) {
-            ret.childs.push(this.processEp(ep, this.sortedEntityPositions))
             this.added.push(ep.id)
+            ret.childs.push(this.processEp(ep, this.sortedEntityPositions))
           }
         })
 
@@ -176,8 +172,8 @@ export default {
         const ret = []
         this.sortedEntityPositions.forEach(ep => {
           if (!this.added.includes(ep.id)) {
-            ret.push(this.processEp(ep, this.sortedEntityPositions))
             this.added.push(ep.id)
+            ret.push(this.processEp(ep, this.sortedEntityPositions))
           }
         })
         return ret
