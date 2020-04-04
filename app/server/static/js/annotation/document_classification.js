@@ -1,14 +1,14 @@
 import Vue from 'vue';
 import annotationMixin from './mixin';
-import HTTP from './http';
-import simpleShortcut from './filter';
+import HTTP from '../http';
+import simpleShortcut from '../filter';
 
-import { toPercent, parseDate } from './filters'
+import { toPercent, parseDate } from '../filters'
 
 Vue.filter('toPercent', toPercent)
 Vue.filter('parseDate', parseDate)
 
-import vueshortkey from './vue-shortkey'
+import vueshortkey from '../vue-shortkey'
 
 Vue.use(vueshortkey, {
   prevent: ['input', 'textarea'],
