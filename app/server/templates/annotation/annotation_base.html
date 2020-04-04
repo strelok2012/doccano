@@ -74,6 +74,11 @@
                     <label class="radio">
                       <input type="radio" value="completed" v-model="picked"> Annotated
                     </label>
+                    <a class="dropdown-item" v-for="(label, index) in labels">
+                      <label class="checkbox" :disabled="picked != 'completed'">
+                        <input type="checkbox" :value="label.id" v-model="pickedLabels" :disabled="picked != 'completed'"> [[ label.text ]]
+                      </label>
+                    </a>
                   </a>
                 </div>
               </div>

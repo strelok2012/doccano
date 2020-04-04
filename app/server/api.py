@@ -756,8 +756,10 @@ class DocumentList(generics.ListCreateAPIView):
         if self.request.query_params.get('is_checked'):
             if (self.request.query_params.get('is_checked') == 'true'):
                 queryset = project.get_unannotated_documents(user=self.request.user.id)
-            else:
+            elif (self.request.query_params.get('is_checked') == 'false'):
                 queryset = project.get_annotated_documents(user=self.request.user.id)
+            else:
+                queryset = project.get_annotated_documents(user=self.request.user.id, labels=self.request.query_params.get('is_checked'))
         else:
             queryset = project.get_all_documents(user=self.request.user.id)
 
