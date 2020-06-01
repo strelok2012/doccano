@@ -33,15 +33,10 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = False
 DEBUG = True
-# if os.environ.get('DEBUG') == 'False':
-#     DEBUG = False
+if os.environ.get('DOCCANO_DEBUG') == 'False':
+    DEBUG = False
 
-# DEBUG = bool(os.environ.get('DEBUG', False))
-# DEBUG = os.environ.get('DEBUG') == 'TRUE'
-
-
-# ALLOWED_HOSTS = []
-
+DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Application definition
 
@@ -106,7 +101,7 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'server/node_modules/gecko/build')
 ]
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'app.storage.CompressedManifestStaticFilesStorage'
 
 WSGI_APPLICATION = 'app.wsgi.application'
 
@@ -156,8 +151,8 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     },
 }
-DATABASES['default'] = DATABASES['posgres']
-# DATABASES['default'] = DATABASES['posgres_local']
+# DATABASES['default'] = DATABASES['posgres']
+DATABASES['default'] = DATABASES['posgres_local']
 
 if "test" in sys.argv:
     DATABASES = {    

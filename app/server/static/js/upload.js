@@ -27,24 +27,32 @@ const vm = new Vue({
         {
           value: 'csv_labeled_users',
           text: 'Upload a users labeled CSV file from your computer'
+        },
+        {
+          value: 'csv_labeled_ml',
+          text: 'Upload a ML labeled CSV file from your computer'
         }
       ],
       url: [
         {
           value: 'csv_url',
-          text: 'Upload a CSV file from URL'
+          text: 'Upload a CSV file from URL/S3'
         },
         {
           value: 'json_url',
-          text: 'Upload a JSON file from URL'
+          text: 'Upload a JSON file from URL/S3'
         },
         {
           value: 'csv_labeled_url',
-          text: 'Upload a labeled CSV file from URL'
+          text: 'Upload a labeled CSV file from URL/S3'
         },
         {
           value: 'csv_labeled_users_url',
-          text: 'Upload a users labeled CSV file from URL'
+          text: 'Upload a users labeled CSV file from URL/S3'
+        },
+        {
+          value: 'csv_labeled_ml_url',
+          text: 'Upload a ML labeled CSV file from your URL/S3'
         }
       ]
     }

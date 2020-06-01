@@ -1,5 +1,6 @@
 import csv
 import json
+import random
 from io import TextIOWrapper, StringIO, BytesIO
 import itertools as it
 import logging
@@ -33,7 +34,7 @@ from .resources import DocumentResource, DocumentAnnotationResource, LabelResour
 
 from .permissions import SuperUserMixin
 from .forms import ProjectForm
-from .models import Document, Project, DocumentAnnotation, DocumentMLMAnnotation, Label, DocumentGoldAnnotation, User, AudioLabelingAnnotation
+from .models import Document, Project, DocumentAnnotation, SequenceAnnotation, DocumentMLMAnnotation, Label, DocumentGoldAnnotation, User, AudioLabelingAnnotation
 from app import settings
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -427,7 +428,87 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
         else:
             return []
 
-    def users_labeled_csv_to_labels(self, project, file, text_key='text', label_key='label', user_key='user'):
+    def ml_labeled_csv_to_labels_document_annotation(self, project, file, text_key='text', label_key='label', additional_data_key='additional_data', prob_key='prob'):
+        form_data = TextIOWrapper(file, encoding='utf-8', errors='ignore')
+        dialect = csv.Sniffer().sniff(form_data.read(1024))
+        print('DIALECT', dialect)
+        form_data.seek(0)
+        reader = csv.reader(form_data, dialect)
+
+        maybe_header = next(reader)
+        if maybe_header:
+            if (text_key in maybe_header and label_key in maybe_header and user_key in maybe_header):
+                text_col = maybe_header.index(text_key)
+                label_col = maybe_header.index(label_key)
+                additional_data_col = maybe_header.index(additional_data_key)
+                prob_col = maybe_header.index(prob_key)
+            elif len(maybe_header) == 2:
+                reader = it.chain([maybe_header], reader)
+                text_col = 0
+                label_col = 1
+            elif len(maybe_header) == 3:
+                reader = it.chain([maybe_header], reader)
+                text_col = 0
+                label_col = 1
+                additional_data_col = 2
+            elif len(maybe_header) == 4:
+                reader = it.chain([maybe_header], reader)
+                text_col = 0
+                label_col = 1
+                additional_data_col = 2
+                prob_col = 3
+            else:
+                raise DataUpload.ImportFileError("CSV file must either have a first row with the column titles \"text\", \"label\", or have minimum two columns in that order.")
+            errors = []
+            labels_set = []
+            count = 0
+            for row in reader:
+                if row[text_col]=='':
+                    continue
+                label_obj = Label.objects.filter(text__exact=row[label_col], project=project)
+                if len(label_obj)>1:
+                    errors.append('Found multiple labels with text "{}"'.format(row[label_col]))
+                    continue
+                else:
+                    label_obj = label_obj.first()
+
+                document_obj = Document.objects.filter(text__exact=row[text_col], project=project)
+                if len(document_obj) > 1:
+                    errors.append('Found multiple documents with text "{}"'.format(row[text_col]))
+                    continue
+                else:
+                    document_obj = document_obj.first()
+
+                if (label_obj and document_obj):
+                    new_label = [label_obj, document_obj, '{}', 0]
+                    if len(row) > 2:
+                        new_label[2] = row[2]
+                    
+                    if len(row) > 3:
+                        new_label[3] = row[3]
+
+                    labels_set.append(new_label)
+                else:
+                    if (not label_obj):
+                        errors.append('Label "' + row[label_col] + '" is not found')
+                    if (not document_obj):
+                        errors.append('Document with text "' + row[text_col] + '" is not found')
+            if len(errors):
+                raise DataUpload.ImportFileError('Encoutered {} errors: \n\n{}'.format(len(errors), '\n\n'.join(errors)) )
+
+            return (
+                DocumentMLMAnnotation(
+                    label=label[0],
+                    document=label[1],
+                    additional_data=label[2],
+                    prob=label[3]
+                )
+                for label in labels_set
+            )
+        else:
+            return []
+
+    def users_labeled_csv_to_labels_document_annotation(self, project, file, text_key='text', label_key='label', user_key='user'):
         form_data = TextIOWrapper(file, encoding='utf-8', errors='ignore')
         reader = csv.reader(form_data, quotechar='"', delimiter=',',
                      quoting=csv.QUOTE_ALL, skipinitialspace=True)
@@ -495,6 +576,124 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
             )
         else:
             return []
+    
+    def users_labeled_csv_to_labels_sequence_labeling(self, project, file, text_key='document_text', label_key='label_text', user_key='username', start_offset_key='start_offset', end_offset_key='end_offset'):
+        form_data = TextIOWrapper(file, encoding='utf-8', errors='ignore')
+        reader = csv.reader(form_data, quotechar='"', delimiter=',',
+                     quoting=csv.QUOTE_ALL, skipinitialspace=True)
+
+        maybe_header = next(reader)
+
+        if maybe_header:
+            if (text_key in maybe_header
+                and label_key in maybe_header
+                and user_key in maybe_header
+                and start_offset_key in maybe_header
+                and end_offset_key in maybe_header):
+                text_col = maybe_header.index(text_key)
+                label_col = maybe_header.index(label_key)
+                user_col = maybe_header.index(user_key)
+                start_offset_col = maybe_header.index(start_offset_key)
+                end_offset_col = maybe_header.index(end_offset_key)
+            elif len(maybe_header) == 5:
+                reader = it.chain([maybe_header], reader)
+                text_col = 0
+                label_col = 1
+                user_col = 2
+                start_offset_col = 3
+                end_offset_col = 4
+            else:
+                raise DataUpload.ImportFileError("CSV file must either have a first row with the column titles \"text\", \"label\", \"user\", \"start_offset\" and \"end_offset\"  or have five columns in that order.")
+
+            errors = []
+            labels_set = []
+            count = 0
+            for row in reader:
+                if row[text_col]=='':
+                    continue
+                label_obj = Label.objects.filter(text__exact=row[label_col], project=project)
+                if len(label_obj)>1:
+                    errors.append('Found multiple labels with text "{}"'.format(row[label_col]))
+                    continue
+                else:
+                    label_obj = label_obj.first()
+
+                document_obj = Document.objects.filter(text__exact=row[text_col], project=project)
+                if len(document_obj) > 1:
+                    errors.append('Found multiple documents with text "{}"'.format(row[text_col]))
+                    continue
+                else:
+                    document_obj = document_obj.first()
+
+                user_obj = User.objects.filter(username__exact=row[user_col])
+
+                if len(user_obj) > 1:
+                    errors.append('Found multiple users with name "{}"'.format(row[user_col]))
+                    continue
+                else:
+                    user_obj = user_obj.first()
+
+                start_offset = row[start_offset_col]
+                end_offset = row[end_offset_col]
+
+                labels_set_row = []
+
+                if (label_obj):
+                    labels_set_row.append(label_obj)
+                else:
+                    new_label_color = "%06x" % random.randint(0, 0xFFFFFF)
+                    new_label = Label.objects.create(
+                        background_color='#' + new_label_color,
+                        text=row[label_col],
+                        project=project
+                    )
+                    labels_set_row.append(new_label)
+                
+                if (document_obj):
+                    labels_set_row.append(document_obj)
+                else:
+                    new_document = Document.objects.create(
+                        text=row[text_col],
+                        project=project
+                    )
+                    labels_set_row.append(new_document)
+
+                if (user_obj):
+                    labels_set_row.append(user_obj)
+                else:
+                    errors.append('User with name "' + row[user_col] + '" is not found')
+
+                labels_set_row.append(start_offset)
+                labels_set_row.append(end_offset)
+                labels_set.append(labels_set_row)
+                        
+            if len(errors):
+                raise DataUpload.ImportFileError('Encoutered {} errors: \n\n{}'.format(len(errors), '\n\n'.join(errors)) )
+
+            return (
+                SequenceAnnotation(
+                    label=label[0],
+                    document=label[1],
+                    user=label[2],
+                    start_offset=label[3],
+                    end_offset=label[4]
+                )
+                for label in labels_set
+            )
+        else:
+            return []
+
+    def ml_labeled_csv_to_labels(self, project, file, text_key='text', label_key='label', additional_data_key='additional_data', prob_key='prob'):
+        if project.is_type_of(Project.DOCUMENT_CLASSIFICATION) or project.is_type_of(Project.SEQUENCE_LABELING_ALT):
+            return self.ml_labeled_csv_to_labels_document_annotation(project, file, text_key, label_key, additional_data_key, prob_key)
+        elif project.is_type_of(Project.SEQUENCE_LABELING):
+            return self.ml_labeled_csv_to_labels_sequence_labeling(project, file)
+
+    def users_labeled_csv_to_labels(self, project, file, text_key='text', label_key='label', user_key='user'):
+        if project.is_type_of(Project.DOCUMENT_CLASSIFICATION):
+            return self.users_labeled_csv_to_labels_document_annotation(project, file, text_key, label_key, user_key)
+        elif project.is_type_of(Project.SEQUENCE_LABELING):
+            return self.users_labeled_csv_to_labels_sequence_labeling(project, file)
 
     def extract_metadata_json(self, entry, text_key):
         copy = entry.copy()
@@ -512,149 +711,97 @@ class DataUpload(SuperUserMixin, LoginRequiredMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         project = get_object_or_404(Project, pk=kwargs.get('project_id'))
         import_format = request.POST['format']
-        if (project.is_type_of(Project.AudioLabeling)):
-            try:
-                if (request.POST['url']):
+        try:
+            if (request.POST['url']):
+                url = request.POST['url']
+                if url[0:5] == 's3://' :
                     s3 = s3fs.S3FileSystem(anon=False)
-                    file = s3.open(request.POST['url'], 'rb')
-                    import_format = import_format.replace('_url', '')
+                    file = s3.open(request.POST['url'].replace('s3://', ''), 'rb')
                 else:
-                    file = request.FILES['file'].file
-                documents = []
-                fail = []
+                    r = requests.get(url)
+                    file = BytesIO(r.content)
+                import_format = import_format.replace('_url', '')
+            else:
+                file = request.FILES['file'].file
+            documents = []
+            true_labels = []
+            users_labels = []
+            ml_labels = []
+            if import_format == 'csv':
+                documents = self.csv_to_documents(project, file)
+            elif import_format == 'json':
+                documents = self.json_to_documents(project, file)
+            elif import_format == 'csv_labeled':
+                true_labels = self.labeled_csv_to_labels(project, file)
+            elif import_format == "csv_labeled_users":
+                users_labels = self.users_labeled_csv_to_labels(project, file)
+            elif import_format == "csv_labeled_ml":
+                ml_labels = self.ml_labeled_csv_to_labels(project, file)
+
+            batch_size = settings.IMPORT_BATCH_SIZE
+
+            if (import_format == 'csv' or import_format == 'json'):
                 docs_len = 0
-                if import_format == 'json':
-                    parsed_entries = (json.loads(line) for line in file)
-                    for idx, entry in enumerate(parsed_entries):
-                        if entry.get('media'):
-                            media_req = requests.head(entry['media'])
-                            if (media_req.status_code == 200):
-                                media_url = entry['media']
-                                metadata = {}
-                                new_doc = Document(text=media_url, project=project)
-                                new_doc.save()
-                                docs_len = docs_len + 1
-                                if (entry.get('transcription')):
-                                    for tr in entry['transcription']:
-                                        tr_req = requests.get(tr)
-                                        if (tr_req.status_code == 200):
-                                            filename = tr.split('/')[-1]
-                                            new_annotation = AudioLabelingAnnotation(document=new_doc, file_name=filename, file_path=tr, data=tr_req.text, user=self.request.user)
-                                            new_annotation.save()
-                                        else:
-                                            fail.append({
-                                                'reason': 'transcription_unavailable',
-                                                'message': tr
-                                            })
-                            else:
-                                fail.append({
-                                    'reason': 'media_unavailable',
-                                    'message': entry['media']
-                                })
-                        else:
-                            fail.append({
-                                'reason': 'no_media',
-                                'message': idx
-                            })
-                batch_size = settings.IMPORT_BATCH_SIZE
-                    
-                #while True:
-                #    batch = list(it.islice(documents, batch_size))
-                #    if not batch:
-                #        break
-                #    docs_len += len(batch)
-                #    Document.objects.bulk_create(batch, batch_size=batch_size, ignore_conflicts=True)
-                response = {
-                    'fail': fail,
-                    'success': docs_len
-                }
-                return HttpResponse(json.dumps(response), content_type="application/json")
-
-            except DataUpload.ImportFileError as e:
-                response = {
-                    'fail': [
-                        {
-                            'reason': 'import_file_error',
-                            'message': e.message
-                        }
-                    ]
-                }
-                return HttpResponse(json.dumps(response), content_type="application/json")
-            except Exception as e:
-                response = {
-                    'fail': [
-                        {
-                            'reason': 'exception',
-                            'message': e
-                        }
-                    ]
-                }
-                return HttpResponse(json.dumps(response), content_type="application/json")
-
-        else:
-            try:
-                if (request.POST['url']):
-                    s3 = s3fs.S3FileSystem(anon=False)
-                    file = s3.open(request.POST['url'], 'rb')
-                    import_format = import_format.replace('_url', '')
-                else:
-                    file = request.FILES['file'].file
-                documents = []
-                true_labels = []
-                users_lsbels = []
-                if import_format == 'csv':
-                    documents = self.csv_to_documents(project, file)
-                elif import_format == 'json':
-                    documents = self.json_to_documents(project, file)
-                elif import_format == 'csv_labeled':
-                    true_labels = self.labeled_csv_to_labels(project, file)
-                elif import_format == "csv_labeled_users":
-                    users_lsbels = self.users_labeled_csv_to_labels(project, file)
-
-                batch_size = settings.IMPORT_BATCH_SIZE
-
-                if (import_format == 'csv' or import_format == 'json'):
-                    docs_len = 0
-                    while True:
-                        batch = list(it.islice(documents, batch_size))
-                        if not batch:
-                            break
-                        docs_len += len(batch)
-                        Document.objects.bulk_create(batch, batch_size=batch_size)
-                    url = reverse('dataset', args=[project.id])
-                    url += '?docs_count=' + str(docs_len)
-                    return HttpResponseRedirect(url)
-                elif (import_format == 'csv_labeled'):
-                    labels_len = 0
-                    while True:
-                        batch = list(it.islice(true_labels, batch_size))
-                        if not batch:
-                            break
-                        labels_len += len(batch)
-                        DocumentGoldAnnotation.objects.bulk_create(batch, batch_size=batch_size)
-                    url = reverse('dataset', args=[project.id])
-                    url += '?true_labels_count=' + str(labels_len)
-                    return HttpResponseRedirect(url)
-                elif (import_format == "csv_labeled_users"):
-                    labels_len = 0
-                    while True:
-                        batch = list(it.islice(users_lsbels, batch_size))
-                        if not batch:
-                            break
-                        labels_len += len(batch)
+                while True:
+                    batch = list(it.islice(documents, batch_size))
+                    if not batch:
+                        break
+                    docs_len += len(batch)
+                    Document.objects.bulk_create(batch, batch_size=batch_size)
+                url = reverse('dataset', args=[project.id])
+                url += '?docs_count=' + str(docs_len)
+                return HttpResponseRedirect(url)
+            elif (import_format == 'csv_labeled'):
+                labels_len = 0
+                while True:
+                    batch = list(it.islice(true_labels, batch_size))
+                    if not batch:
+                        break
+                    labels_len += len(batch)
+                    DocumentGoldAnnotation.objects.bulk_create(batch, batch_size=batch_size)
+                url = reverse('dataset', args=[project.id])
+                url += '?true_labels_count=' + str(labels_len)
+                return HttpResponseRedirect(url)
+            elif (import_format == "csv_labeled_users"):
+                labels_len = 0
+                while True:
+                    batch = list(it.islice(users_labels, batch_size))
+                    if not batch:
+                        break
+                    labels_len += len(batch)
+                    if project.is_type_of(Project.DOCUMENT_CLASSIFICATION):
                         DocumentAnnotation.objects.bulk_create(batch, batch_size=batch_size)
-                    url = reverse('dataset', args=[project.id])
-                    url += '?users_labels_count=' + str(labels_len)
+                    elif project.is_type_of(Project.SEQUENCE_LABELING):
+                        SequenceAnnotation.objects.bulk_create(batch, batch_size=batch_size)
                     
+                url = reverse('dataset', args=[project.id])
+                url += '?users_labels_count=' + str(labels_len)
+                return HttpResponseRedirect(url)
+            elif (import_format == "csv_labeled_ml"):
+                labels_len = 0
+                while True:
+                    batch = list(it.islice(ml_labels, batch_size))
+                    if not batch:
+                        break
+                    labels_len += len(batch)
+                    if project.is_type_of(Project.DOCUMENT_CLASSIFICATION) or project.is_type_of(Project.SEQUENCE_LABELING_ALT):
+                        DocumentMLMAnnotation.objects.bulk_create(batch, batch_size=batch_size)
+                    elif project.is_type_of(Project.SEQUENCE_LABELING):
+                        SequenceAnnotation.objects.bulk_create(batch, batch_size=batch_size)
+                    
+                url = reverse('dataset', args=[project.id])
+                url += '?ml_labels_count=' + str(labels_len)
+                return HttpResponseRedirect(url)
+                
 
-            except DataUpload.ImportFileError as e:
-                messages.add_message(request, messages.ERROR, e.message)
-                return HttpResponseRedirect(reverse('upload', args=[project.id]))
-            except Exception as e:
-                logger.exception(e)
-                messages.add_message(request, messages.ERROR, 'Something went wrong')
-                messages.add_message(request, messages.ERROR, e)
-                return HttpResponseRedirect(reverse('upload', args=[project.id]))
+        except DataUpload.ImportFileError as e:
+            messages.add_message(request, messages.ERROR, e.message)
+            return HttpResponseRedirect(reverse('upload', args=[project.id]))
+        except Exception as e:
+            logger.exception(e)
+            messages.add_message(request, messages.ERROR, 'Something went wrong')
+            messages.add_message(request, messages.ERROR, e)
+            return HttpResponseRedirect(reverse('upload', args=[project.id]))
     
     def get_context_data(self, **kwargs):
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])

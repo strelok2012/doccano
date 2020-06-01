@@ -18,13 +18,16 @@
     </div>
   </header>
   <div class="card-content">
-    <div class="content" v-if="docs[pageNumber] && annotations[pageNumber]">
-      <annotator ref="annotator" v-bind:labels="labels" v-bind:entity-positions="annotations[pageNumber]" v-bind:text="docs[pageNumber].text" :sentence-labeling="sentenceLabeling"
+    <div class="content" v-if="docs[pageNumber] && currentAnnotations">
+      <p class="sentence-labeling__conversation" v-if="metadataObj && metadataObj.link">
+          Listen: <a :href="metadataObj.link" target="_blank">[[ metadataObj.call_id ]]</a>
+      </p>
+      <annotator ref="annotator" v-bind:labels="labels" v-bind:entity-positions="currentAnnotations" v-bind:text="docs[pageNumber].text" :sentence-labeling="sentenceLabeling"
         @remove-label="removeLabel" @add-label="addLabel"></annotator>
     </div>
   </div>
 </div>
 {% endblock %}
 {% block footer %}
-<script src="{% static 'bundle/sequence_labeling.js' %}"></script>
+<script src="{% static 'bundle/sequence_labeling_alt.js' %}"></script>
 {% endblock %}

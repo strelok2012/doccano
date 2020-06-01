@@ -136,8 +136,11 @@
                       <div class="dataset-item__main-subtitle">
                         [[ project.description ]]
                       </div>
-                      <div class="dataset-item__main-subtitle">
+                      <div class="dataset-item__main-subtitle" v-if="project.progress">
                           Labeled: [[ project.progress.total - project.progress.remaining ]] / [[ project.progress.total ]]
+                      </div>
+                      <div class="dataset-item__main-subtitle" v-else>
+                          Loading project progress...
                       </div>
                       <div class="dataset-item__main-info">
                         <span class="dataset-item__main-update">updated <span>[[ getDaysAgo(project.updated_at) ]] days ago</span></span></div>

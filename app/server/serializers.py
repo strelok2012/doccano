@@ -23,11 +23,16 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username', 'email', 'projects')
 
+class ProjectListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ('id', 'name', 'description', 'project_type', 'image', 'updated_at')
+
 class ProjectSerializer(serializers.ModelSerializer):
     progress = serializers.SerializerMethodField()
     class Meta:
         model = Project
-        fields = ('id', 'name', 'description', 'guideline', 'users', 'project_type', 'image', 'updated_at', 'use_machine_model_sort', 'progress', 'enable_metadata_search', 'show_ml_model_prediction', 'enable_metadata_search')
+        fields = ('id', 'name', 'description', 'guideline', 'users', 'project_type', 'image', 'updated_at', 'use_machine_model_sort', 'progress', 'enable_metadata_search', 'show_ml_model_prediction', 'enable_metadata_search', 'sentence_labeling')
 
     def get_progress(self, obj):
         request = self.context.get('request')
@@ -50,7 +55,7 @@ class DocumentAnnotationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DocumentAnnotation
-        fields = ('id', 'prob', 'label')
+        fields = ('id', 'prob', 'label', 'additional_data')
 
     def create(self, validated_data):
         annotation = DocumentAnnotation.objects.create(**validated_data)
@@ -61,7 +66,7 @@ class DocumentMLMAnnotationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DocumentMLMAnnotation
-        fields = ('id', 'prob', 'label')
+        fields = ('id', 'prob', 'label', 'additional_data')
 
     def create(self, validated_data):
         annotation = DocumentMLMAnnotation.objects.create(**validated_data)

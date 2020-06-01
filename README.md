@@ -11,7 +11,9 @@ Doccano prompts labelers to annotate examples that would most likely improve mod
 Doccano allows for the integration of the work of multiple labelers, and provides administrative tools to for evaluating the performance of each labeler as well as inter-labeler agreement. It further combines the labelers annotations to create a joint gold standard.
 
 ## Presentation
-We presented Doccano at the <a target="_blank" href="https://www.aidatasciencesummit.com/">2019 Data Science Summit</a>. Slides are available <a target="_blank" href="https://docs.google.com/presentation/d/12T0AzfMb_0ikfxP4ZA2eaGaVyx9w45PoFKC6oSF2dVU/edit?usp=sharing">here</a>.
+We presented Doccano at the <a target="_blank" href="https://www.aidatasciencesummit.com/">2019 Data Science Summit</a>. Slides are available <a target="_blank" href="https://docs.google.com/presentation/d/1mj3FYsYKrxHmCqV-02B_NeoaUpLZntrkmQvRlW5Sn_M/edit?usp=sharing">here</a> and a video of the talk is <a target="_blank" href="https://www.youtube.com/watch?v=Au3N0q_iN2c">here</a>.
+[![Effective text, image and audio classification with Doccano](http://img.youtube.com/vi/Au3N0q_iN2c/0.jpg)](http://www.youtube.com/watch?v=Au3N0q_iN2c "Video: Effective text, image and audio classification with Doccano")
+
 
 ## Features
 

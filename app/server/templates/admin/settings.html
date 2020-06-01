@@ -42,6 +42,14 @@
                     </select>
                   </div>
                 </div>
+                
+                {{ projectType }}
+                <div class="field">
+                  <label class="checkbox" v-if="projectType == 'SequenceLabeling' || projectType == 'SequenceLabelingAlt'" >
+                      <input type="checkbox" v-model="projectSettings.sentence_labeling">
+                      Sentence Labeling
+                  </label>
+                </div>
 
                 <div class="field">
                     <label class="checkbox">

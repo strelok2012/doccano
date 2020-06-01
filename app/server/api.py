@@ -38,7 +38,7 @@ from rest_framework.views import APIView
 
 from .models import Project, Label, Document, DocumentAnnotation, DocumentMLMAnnotation
 from .permissions import IsAdminUserAndWriteOnly, IsProjectUser, IsOwnAnnotation
-from .serializers import ProjectSerializer, LabelSerializer, Word2vecSerializer, UserSerializer
+from .serializers import ProjectSerializer, ProjectListSerializer, LabelSerializer, Word2vecSerializer, UserSerializer
 from .filters import ExcludeSearchFilter
 
 from .labelers_comparison_functions import create_kappa_comparison_df, compute_average_agreement_per_labeler, add_agreement_columns
@@ -103,7 +103,7 @@ def get_labels_admin(project_id):
 
 class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectListSerializer
     pagination_class = None
     permission_classes = (IsAuthenticated, IsAdminUserAndWriteOnly)
 
@@ -469,7 +469,7 @@ class ProjectStatsAPI(APIView):
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])
         project_type = Project.project_types[project.project_type]['type']
 
-        if project_type=='DocumentClassification':
+        if project_type=='DocumentClassification' or project_type == 'SequenceLabelingAlt':
             query = """
     SELECT
         server_documentannotation.user_id,
@@ -648,21 +648,30 @@ class DocumentLabelersAPI(generics.RetrieveUpdateDestroyAPIView):
         return Response(response)
 
 
-class ProjectDetail(generics.RetrieveUpdateDestroyAPIView):
+class ProjectDetails(generics.RetrieveUpdateDestroyAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUser)
+    lookup_url_kwarg = 'project_id'
 
-    def get_queryset(self):
+    @action(methods=['get'], detail=True)
+    def progress(self, request, pk=None):
+        project = self.get_object()
+        return Response(project.get_progress(self.request.user))
+
+
+class ProjectList(generics.ListCreateAPIView):
+    queryset = Project.objects.all().order_by('-updated_at')
+    serializer_class = ProjectListSerializer
+    pagination_class = None
+    permission_classes = (IsAuthenticated, IsAdminUserAndWriteOnly)
+
+class ProjectProgressAPI(APIView):
+    pagination_class = None
+    permission_classes = (IsAuthenticated, IsAdminUserAndWriteOnly)
+    def get(self, request, *args, **kwargs):
         project = get_object_or_404(Project, pk=self.kwargs['project_id'])
-        queryset = self.queryset.filter(project.id)
-        return queryset
-
-
-class ProjectsDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
-    permission_classes = (IsAuthenticated, IsProjectUser, IsAdminUser)
+        return Response(project.get_progress(self.request.user))
 
 
 class LabelDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -745,13 +754,14 @@ class DocumentList(generics.ListCreateAPIView):
         queryset = self.queryset
 
         if self.request.query_params.get('is_checked'):
-            is_null = self.request.query_params.get('is_checked') == 'true'
-            queryset = project.get_documents(is_null=is_null, user=self.request.user.id).distinct()
-
-        if (project.use_machine_model_sort):
-            queryset = queryset.order_by('doc_mlm_annotations__prob').filter(project=self.kwargs['project_id'])
+            if (self.request.query_params.get('is_checked') == 'true'):
+                queryset = project.get_unannotated_documents(user=self.request.user.id)
+            elif (self.request.query_params.get('is_checked') == 'false'):
+                queryset = project.get_annotated_documents(user=self.request.user.id)
+            else:
+                queryset = project.get_annotated_documents(user=self.request.user.id, labels=self.request.query_params.get('is_checked'))
         else:
-            queryset = queryset.order_by('doc_annotations__prob').filter(project=self.kwargs['project_id'])
+            queryset = project.get_all_documents(user=self.request.user.id)
 
         if (self.request.query_params.get('rules')):
             result = []
@@ -776,11 +786,6 @@ class DocumentList(generics.ListCreateAPIView):
                     if (should_append):
                         result.append(doc.id)
                 queryset = queryset.filter(id__in=result)
-
-        if project.shuffle_documents:
-            print('order randomly')
-            queryset = queryset.order_by('?')
-
         return queryset
 
 class MetadataAPI(APIView):

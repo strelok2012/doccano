@@ -2,7 +2,7 @@ import json
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import JSONField
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.urls import reverse
 from django.contrib.auth.models import User
 from .utils import get_key_choices
@@ -14,6 +14,8 @@ class Project(models.Model):
 
     DOCUMENT_CLASSIFICATION = 'DocumentClassification'
     SEQUENCE_LABELING = 'SequenceLabeling'
+
+    SEQUENCE_LABELING_ALT = 'SequenceLabelingAlt'
     Seq2seq = 'Seq2seq'
     AudioLabeling = 'AudioLabeling'
 
@@ -30,6 +32,7 @@ class Project(models.Model):
     enable_metadata_search = models.BooleanField(default=False)
     show_ml_model_prediction = models.BooleanField(default=False)
     shuffle_documents = models.BooleanField(default=False)
+    sentence_labeling = models.BooleanField(default=True)
 
     def __init__(self, *args, **kwargs):
         super(Project,self).__init__(*args, **kwargs)
@@ -82,6 +85,69 @@ class Project(models.Model):
             docs = docs.filter(doc_annotations__isnull=False)
         return docs
 
+    def get_documents_kwargs(self, user, labels=None):
+        ret = {}
+        if not user:
+            return ret
+        if (labels):
+            labels = labels.split(',')
+        if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
+            ret["doc_annotations__user"] = user
+            if (labels):
+                ret[ "doc_annotations__label__in"] = labels
+        elif self.is_type_of(Project.SEQUENCE_LABELING_ALT):
+            ret["doc_annotations__user"] = user
+            if (labels):
+                ret[ "doc_annotations__label__in"] = labels
+        elif self.is_type_of(Project.SEQUENCE_LABELING):
+            ret["seq_annotations__user"] = user
+            if (labels):
+                ret[ "seq_annotations__label__in"] = labels
+        elif self.is_type_of(Project.Seq2seq):
+            ret["seq_annotations__user"] = user
+            if (labels):
+                ret[ "seq_annotations__label__in"] = labels
+        else:
+            print('Project type: '+self.project_type)
+            raise ValueError('Invalid project_type')
+
+        return ret
+
+    def get_unannotated_documents(self, user):
+        docs = self.documents
+        if not user:
+            return docs
+
+        docs = docs.exclude(**self.get_documents_kwargs(user))
+
+        return docs
+
+    def get_annotated_ordering(self):
+        if self.shuffle_documents:
+            order = '?'
+        elif self.use_machine_model_sort:
+            order = 'doc_mlm_annotations__prob'
+        else:
+            order = 'doc_annotations__prob'
+
+        return order
+    
+    def get_annotated_documents(self, user, labels=None):
+        docs = self.documents.filter(project=self.pk)
+        if not user:
+            return docs
+        docs = docs.filter(**self.get_documents_kwargs(user)).order_by(self.get_annotated_ordering())
+        return docs.filter(**self.get_documents_kwargs(user, labels)).order_by(self.get_annotated_ordering()).annotate(id_count=Count('id'))
+    
+    def get_all_documents(self, user):
+        docs = self.documents
+        if not user:
+            return docs
+        
+        annotated = docs.filter(**self.get_documents_kwargs(user)).order_by(self.get_annotated_ordering()).annotate(id_count=Count('id'))
+        unannotated = docs.exclude(**self.get_documents_kwargs(user)).annotate(id_count=Count('id'))
+
+        return unannotated.union(annotated, all=True)
 
     def get_documents(self, is_null=True, user=None):
         docs = self.documents.all()
@@ -90,6 +156,9 @@ class Project(models.Model):
                 docs = docs.exclude(doc_annotations__user=user)
             # else:
                 # docs = docs.filter(doc_annotations__isnull=is_null)
+        elif self.is_type_of(Project.SEQUENCE_LABELING_ALT):
+            if user:
+                docs = docs.exclude(doc_annotations__user=user)
         elif self.is_type_of(Project.SEQUENCE_LABELING):
             if user:
                 docs = docs.exclude(seq_annotations__user=user)
@@ -124,6 +193,8 @@ class Project(models.Model):
         from .serializers import AudioDocumentSerializer
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
             return ClassificationDocumentSerializer
+        elif self.is_type_of(Project.SEQUENCE_LABELING_ALT):
+            return ClassificationDocumentSerializer
         elif self.is_type_of(Project.SEQUENCE_LABELING):
             return SequenceDocumentSerializer
         elif self.is_type_of(Project.Seq2seq):
@@ -140,6 +211,8 @@ class Project(models.Model):
         from .serializers import AudioAnnotationSerializer
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
             return DocumentAnnotationSerializer
+        elif self.is_type_of(Project.SEQUENCE_LABELING_ALT):
+            return DocumentAnnotationSerializer
         elif self.is_type_of(Project.SEQUENCE_LABELING):
             return SequenceAnnotationSerializer
         elif self.is_type_of(Project.Seq2seq):
@@ -149,6 +222,8 @@ class Project(models.Model):
 
     def get_annotation_class(self):
         if self.is_type_of(Project.DOCUMENT_CLASSIFICATION):
+            return DocumentAnnotation
+        elif self.is_type_of(Project.SEQUENCE_LABELING_ALT):
             return DocumentAnnotation
         elif self.is_type_of(Project.SEQUENCE_LABELING):
             return SequenceAnnotation
@@ -323,6 +398,8 @@ class Document(models.Model):
     def get_annotations(self):
         if self.project.is_type_of(Project.DOCUMENT_CLASSIFICATION):
             return self.doc_annotations.all()
+        elif self.project.is_type_of(Project.SEQUENCE_LABELING_ALT):
+            return self.doc_annotations.all()
         elif self.project.is_type_of(Project.SEQUENCE_LABELING):
             return self.seq_annotations.all()
         elif self.project.is_type_of(Project.Seq2seq):
@@ -416,6 +493,7 @@ class Annotation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_date_time = models.DateTimeField(auto_now_add=True)
     updated_date_time = models.DateTimeField(auto_now=True)
+    additional_data = models.TextField(default='{}')
 
     class Meta:
         abstract = True
@@ -424,6 +502,7 @@ class AnnotationExternal(models.Model):
     prob = models.FloatField(null=True, blank=True, default=None)
     created_date_time = models.DateTimeField(auto_now_add=True)
     updated_date_time = models.DateTimeField(auto_now=True)
+    additional_data = models.TextField(default='{}')
 
     class Meta:
         abstract = True
@@ -434,7 +513,7 @@ class DocumentAnnotation(Annotation):
     label = models.ForeignKey(Label, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('document', 'user', 'label')
+        unique_together = ('document', 'user', 'label', 'additional_data')
 
     # def __str__(self):
     #     return 'AAAA'
@@ -444,14 +523,14 @@ class DocumentMLMAnnotation(AnnotationExternal):
     label = models.ForeignKey(Label, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('document', 'label')
+        unique_together = ('document', 'label', 'additional_data')
 
 class DocumentGoldAnnotation(AnnotationExternal):
     document = models.ForeignKey(Document, related_name='doc_gold_annotations', on_delete=models.CASCADE)
     label = models.ForeignKey(Label, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('document', 'label')
+        unique_together = ('document', 'label', 'additional_data')
 
 
 class SequenceAnnotation(Annotation):
