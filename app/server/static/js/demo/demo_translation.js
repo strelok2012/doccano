@@ -1,7 +1,7 @@
 import Vue from 'vue';
 import annotationMixin from './demo_mixin';
 
-Vue.use(require('vue-shortkey'));
+Vue.use(require('../vue-shortkey'));
 
 
 const vm = new Vue({

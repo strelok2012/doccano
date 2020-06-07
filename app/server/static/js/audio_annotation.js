@@ -4,7 +4,7 @@ import * as bulmaToast from 'bulma-toast';
 
 import annotationMixin from './mixin';
 
-Vue.use(require('vue-shortkey'), {
+Vue.use(require('./vue-shortkey'), {
     prevent: ['input', 'textarea'],
   });
 
@@ -54,6 +54,7 @@ const vm = new Vue({
           eventData.ctms = ctms
           this.annotation = ctms[0]
         } else {
+          eventData.ctms = []
           this.annotation = null
         }
 
@@ -65,23 +66,22 @@ const vm = new Vue({
         this.filePath = url
         this.$refs.gecko.contentDocument.dispatchEvent(event)
       },
-      async saveAudioAnnotation (data) {
+      async saveAudioAnnotation (annotations) {
         const doc = this.docs[this.docNumber]
         const docId = doc.id;
-        const payload = {
-          file_path: this.filePath,
-          file_name: data.filename,
-          data: data.data
-        };
-        if (this.annotation) {
-          await HTTP.put(`docs/${docId}/annotations/${this.annotation.id}`, payload).then((response) => {
-            this.docs[this.docNumber].annotations = [ response.data ]
-          });
-        } else {
-          await HTTP.post(`docs/${docId}/annotations/`, payload).then((response) => {
-            this.docs[this.docNumber].annotations = [ response.data ]
-          });
-        }
+        
+      
+        annotations.forEach(async a => {
+          const payload = {
+            data: a.data
+          }
+
+          if (a.id) {
+            await HTTP.put(`docs/${docId}/annotations/${a.id}`, payload).then((response) => {
+            });
+          }
+        })
+
         bulmaToast.toast({
             message: `Successfully saved to DB.`,
             type: 'is-success',

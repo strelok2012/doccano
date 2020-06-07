@@ -5,7 +5,7 @@ import annotationMixin from './mixin';
 import HTTP from './http';
 import simpleShortcut from './filter';
 
-Vue.use(require('vue-shortkey'), {
+Vue.use(require('./vue-shortkey'), {
   prevent: ['input', 'textarea'],
 });
 

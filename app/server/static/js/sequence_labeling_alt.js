@@ -11,7 +11,7 @@ import simpleShortcut from './filter';
 
 import { uuidv4 } from './utils'
 
-Vue.use(require('vue-shortkey'), {
+Vue.use(require('./vue-shortkey'), {
   prevent: ['input', 'textarea'],
 });
 

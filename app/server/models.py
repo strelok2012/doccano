@@ -107,6 +107,10 @@ class Project(models.Model):
             ret["seq_annotations__user"] = user
             if (labels):
                 ret[ "seq_annotations__label__in"] = labels
+        elif self.is_type_of(Project.AudioLabeling):
+            ret["audio_labeling_annotations__user"] = user
+            if (labels):
+                ret[ "audio_labeling_annotations__label__in"] = labels
         else:
             print('Project type: '+self.project_type)
             raise ValueError('Invalid project_type')
@@ -562,4 +566,4 @@ class AudioLabelingAnnotation(Annotation):
     data = models.TextField(blank=True)
 
     class Meta:
-        unique_together = ('document', 'user')
+        unique_together = ('document', 'user', 'file_path')

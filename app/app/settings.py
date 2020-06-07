@@ -98,7 +98,7 @@ TEMPLATES = [
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'server/static'),
-    os.path.join(BASE_DIR, 'server/node_modules/gecko/build')
+    os.path.join(BASE_DIR, 'server/node_modules/gecko/build_external')
 ]
 
 STATICFILES_STORAGE = 'app.storage.CompressedManifestStaticFilesStorage'
@@ -179,18 +179,6 @@ if 'TRAVIS' in os.environ:
             'CONN_MAX_AGE': 60
         }  
     }
-
-DATABASES = {    
-        'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'doccano',
-        'USER': 'postgres',
-        'PASSWORD': 'admin',
-        'HOST': 'localhost',
-        'PORT': 5432,
-        'CONN_MAX_AGE': 60
-    }  
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
