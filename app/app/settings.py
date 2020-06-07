@@ -98,7 +98,7 @@ TEMPLATES = [
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'server/static'),
-    os.path.join(BASE_DIR, 'server/node_modules/gecko/build')
+    os.path.join(BASE_DIR, 'server/node_modules/gecko/build_external')
 ]
 
 STATICFILES_STORAGE = 'app.storage.CompressedManifestStaticFilesStorage'

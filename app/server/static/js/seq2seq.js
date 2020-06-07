@@ -2,7 +2,7 @@ import Vue from 'vue';
 import annotationMixin from './mixin';
 import HTTP from './http';
 
-Vue.use(require('vue-shortkey'));
+Vue.use(require('./vue-shortkey'));
 
 
 const vm = new Vue({
