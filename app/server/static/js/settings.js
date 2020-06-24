@@ -1,5 +1,5 @@
 import Vue from 'vue';
-import HTTP from '../http';
+import HTTP from './http';
 
 import * as bulmaToast from 'bulma-toast';
 

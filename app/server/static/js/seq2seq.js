@@ -1,10 +1,8 @@
 import Vue from 'vue';
 import annotationMixin from './mixin';
-import HTTP from '../http';
+import HTTP from './http';
 
-import vueshortkey from '../vue-shortkey'
-
-Vue.use(vueshortkey);
+Vue.use(require('vue-shortkey'));
 
 
 const vm = new Vue({

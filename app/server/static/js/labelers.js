@@ -1,7 +1,7 @@
 import Vue from 'vue';
-import HTTP from '../http';
+import HTTP from './http';
 
-import { toPercent, toFixed, parseDate } from '../filters'
+import { toPercent, toFixed, parseDate } from './filters'
 
 Vue.filter('toPercent', toPercent)
 Vue.filter('toFixed', toFixed)
