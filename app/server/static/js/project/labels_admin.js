@@ -1,9 +1,9 @@
 import Vue from 'vue';
-import HTTP from './http';
+import HTTP from '../http';
 
 import { VueGoodTable } from 'vue-good-table';
 
-import { toPercent } from './filters'
+import { toPercent } from '../filters'
 
 import 'vue-good-table/dist/vue-good-table.css'
 
