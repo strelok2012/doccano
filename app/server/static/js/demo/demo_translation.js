@@ -1,9 +1,7 @@
 import Vue from 'vue';
 import annotationMixin from './demo_mixin';
 
-Vue.use(vueshortkey, {
-  prevent: ['input', 'textarea'],
-});
+Vue.use(require('vue-shortkey'));
 
 
 const vm = new Vue({
