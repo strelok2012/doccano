@@ -1,20 +1,24 @@
 import Vue from 'vue';
-import annotationMixin from './mixin';
-import HTTP from './http';
-import simpleShortcut from './filter';
+import * as bulmaToast from 'bulma-toast';
 
-Vue.use(require('vue-shortkey'), {
+import annotationMixin from './mixin';
+import HTTP from '../http';
+import simpleShortcut from '../filter';
+
+import vueshortkey from '../vue-shortkey'
+
+Vue.use(vueshortkey, {
   prevent: ['input', 'textarea'],
 });
 
 Vue.filter('simpleShortcut', simpleShortcut);
 
 Vue.component('annotator', {
-  template: '<div @click="setSelectedRange">\
+  template: '<div>\
                     <span class="text-sequence"\
                          v-for="r in chunks"\
                          v-if="id2label[r.label]"\
-                         v-bind:class="{tag: id2label[r.label].text_color}"\
+                         v-bind:class="{tag: id2label[r.label].text_color, \'text-sequence--sentence\': sentenceLabeling}"\
                          v-bind:style="{ color: id2label[r.label].text_color, backgroundColor: id2label[r.label].background_color }"\
                     >{{ text.slice(r.start_offset, r.end_offset) }}<button class="delete is-small"\
                                          v-if="id2label[r.label].text_color"\
@@ -23,16 +27,32 @@ Vue.component('annotator', {
   props: {
     labels: Array, // [{id: Integer, color: String, text: String}]
     text: String,
-    entityPositions: Array, // [{'startOffset': 10, 'endOffset': 15, 'label_id': 1}]
+    entityPositions: Array, // [{'startOffset': 10, 'endOffset': 15, 'label_id': 1}],
+    sentenceLabeling: Boolean
   },
   data() {
     return {
       startOffset: 0,
       endOffset: 0,
+      currentSelection: null
     };
+  },
+  mounted () {
+    document.addEventListener('selectionchange', this.selectionChange.bind(this))
+  },
+
+  destroy () {
+    document.addEventListener('selectionchange', this.selectionChange.bind(this))
   },
 
   methods: {
+    selectionChange () {
+      const selection = document.getSelection()
+      if (this.$el.contains(selection.focusNode)) {
+        this.currentSelection = selection
+        this.setSelectedRange()
+      }
+    },
     setSelectedRange(e) {
       let start;
       let end;
@@ -53,7 +73,6 @@ Vue.component('annotator', {
       }
       this.startOffset = start;
       this.endOffset = end;
-      console.log(start, end);
     },
 
     validRange() {
@@ -66,6 +85,7 @@ Vue.component('annotator', {
       if (this.startOffset < 0 || this.endOffset < 0) {
         return false;
       }
+
       for (let i = 0; i < this.entityPositions.length; i++) {
         const e = this.entityPositions[i];
         if ((e.start_offset <= this.startOffset) && (this.startOffset < e.end_offset)) {
@@ -81,6 +101,27 @@ Vue.component('annotator', {
           return false;
         }
       }
+
+      if (this.sentenceLabeling) {
+        for (let i = 0; i < this.sentences.length; i++) {
+          const s = this.sentences[i]
+          if (i > 0) {
+            const prev = this.sentences[i - 1]
+            if (this.endOffset === s.start_offset) {
+              this.endOffset = prev.end_offset
+            }
+          }
+          
+          if (this.startOffset >= s.start_offset && this.startOffset <= s.end_offset) {
+            this.startOffset = s.start_offset
+          }
+
+          if (this.endOffset >= s.start_offset && this.endOffset <= s.end_offset) {
+            this.endOffset = s.end_offset
+          }
+        }
+      }
+
       return true;
     },
 
@@ -112,7 +153,7 @@ Vue.component('annotator', {
         end_offset: endOffset,
       };
       return label;
-    },
+    }
   },
 
   watch: {
@@ -125,6 +166,25 @@ Vue.component('annotator', {
     sortedEntityPositions() {
       this.entityPositions = this.entityPositions.sort((a, b) => a.start_offset - b.start_offset);
       return this.entityPositions;
+    },
+
+    sentences() {
+      const splited = this.text.split('\n')
+      const acc = []
+      return splited.reduce((acc, current) => {
+        let offset = 0
+        if (acc.length) {
+          const last = acc[acc.length - 1]
+          offset = last.end_offset + 1
+        }
+
+        acc.push({
+          start_offset: offset,
+          end_offset: current.length + offset
+        })
+
+        return acc
+      }, acc);
     },
 
     chunks() {

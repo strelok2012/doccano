@@ -9,7 +9,8 @@ import pandas as pd
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import classification_report, confusion_matrix
-from sanitize_filename import sanitize_filename
+from classifier.utils import sanitize_filename
+from sklearn.utils.multiclass import unique_labels
 
 logger = logging.getLogger()
 
@@ -118,7 +119,20 @@ class BaseClassifier:
             X = X[self.columns_]
         return self._model.predict_proba(X)
 
-    def optimize_hyper_parameters(self, X_train, y_train, score_func=None, verbose= False):
+    def bootstrap(self, X, y, th=0.9, fit=True):
+        has_label = ~pd.isnull(y)
+        if fit:
+            self.fit(X.loc[has_label], y[has_label])
+
+        prediction_df = self.get_prediction_df(X)
+
+        y_aug = y.copy()
+        aug_ix = (prediction_df['confidence'] > th) & (~has_label)
+        y_aug[aug_ix] = prediction_df['prediction']
+        print('adding ', sum(aug_ix), 'bootstrapped samples')
+        return y_aug
+
+    def optimize_hyper_parameters(self, X_train, y_train, score_func=None, verbose=False):
         if score_func is None:
             score_func = 'f1_macro'
 
@@ -153,20 +167,24 @@ class BaseClassifier:
 
         return prediction_df
 
-    def evaluate(self, X, y):
+    def evaluate(self, X, y, y_pred=None):
         evaluation_result_str = ''
-        y_pred = self._model.predict(X)
+        if X is not None:
+            y_pred = self.predict(X)
 
-        print(classification_report(y, y_pred))
-        evaluation_result_str = evaluation_result_str + classification_report(y, y_pred)
+        evaluation_result_str += classification_report(y, y_pred)
 
         results = precision_recall_fscore_support(y, y_pred, average='macro')
-        print("Precision: {:.3}, Recall: {:.3},  F1 Score: {:.3}\n".format(results[0], results[1], results[2]))
-        evaluation_result_str = evaluation_result_str + "\nPrecision: {:.3}, Recall: {:.3},  F1 Score: {:.3}\n".format(results[0], results[1], results[2])
+        evaluation_result_str += "\nPrecision: {:.3}, Recall: {:.3},  F1 Score: {:.3}\n\n".format(results[0], results[1], results[2])
 
         conf_mat = confusion_matrix(y, y_pred)
-        print(conf_mat)
-        evaluation_result_str = evaluation_result_str + str(conf_mat)
+        # evaluation_result_str += '\n' + str(conf_mat) + '\n\n'
+        classes = unique_labels(y, y_pred)
+        conf_mat = confusion_matrix(y, y_pred, labels=classes)
+        evaluation_result_str += 'Rows - true, columns - model\n'
+        evaluation_result_str += str(pd.DataFrame(conf_mat, index=classes, columns=classes)) + '\n\n'
+
+        print(evaluation_result_str)
 
         return y_pred, evaluation_result_str
 

@@ -42,6 +42,14 @@
                     </select>
                   </div>
                 </div>
+                
+                {{ projectType }}
+                <div class="field">
+                  <label class="checkbox" v-if="projectType == 'SequenceLabeling' || projectType == 'SequenceLabelingAlt'" >
+                      <input type="checkbox" v-model="projectSettings.sentence_labeling">
+                      Sentence Labeling
+                  </label>
+                </div>
 
                 <div class="field">
                     <label class="checkbox">
@@ -63,6 +71,14 @@
                             title="Check this to allow labelers to filter records using metadata upload with each record. This is an advanced feature.">
                         <input type="checkbox" v-model="projectSettings.enable_metadata_search">
                         Enable metadata search
+                    </label>
+                </div>
+
+                <div class="field">
+                    <label class="checkbox"
+                            title="Check this to show documents to labelers in a random order, and not according to document ID. When activated, the order is always the same.">
+                        <input type="checkbox" v-model="projectSettings.shuffle_documents">
+                        Show documents shuffled
                     </label>
                 </div>
 

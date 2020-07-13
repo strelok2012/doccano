@@ -1,10 +1,10 @@
 import { HorizontalBar, mixins, Doughnut } from 'vue-chartjs';
 import Vue from 'vue';
-import HTTP from './http';
+import HTTP from '../http';
 
 import { VueGoodTable } from 'vue-good-table';
 
-import { toFixed } from './filters'
+import { toFixed } from '../filters'
 
 import 'vue-good-table/dist/vue-good-table.css'
 
@@ -76,6 +76,11 @@ const vm = new Vue({
         field: 'weight',
         type: 'number'
       },
+      {
+        label: 'Label',
+        field: 'label',
+        type: 'number'
+      },
     ]
   },
 
@@ -124,7 +129,8 @@ const vm = new Vue({
         if (weightsData[i][1] <= -threshold || weightsData[i][1] >= threshold) {
           this.classWeightsData.push({
             term: weightsData[i][0],
-            weight: +weightsData[i][1]
+            weight: +weightsData[i][1],
+            label: +weightsData[i][2]
           })
         }
       }

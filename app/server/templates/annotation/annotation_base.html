@@ -7,17 +7,11 @@
 {% endblock %}
 {% block navigation %}
 {% if user.is_superuser %}
-<a class="navbar-item" href="{% url 'dataset' view.kwargs.project_id %}">
+<a class="navbar-item" href="{% url 'stats' view.kwargs.project_id %}">
   <span class="icon">
     <i class="fas fa-edit"></i>
   </span>
   <b>Edit</b>
-</a>
-<a class="navbar-item" @click="runModel" title="Train a Machine Learning model to classify documents based on the documents that were already annotated">
-  <span class="icon">
-    <i class="fas fa-robot"></i>
-  </span>
-  <b>Run Model</b>
 </a>
 
 <!-- Modal card for creating project. -->
@@ -80,6 +74,11 @@
                     <label class="radio">
                       <input type="radio" value="completed" v-model="picked"> Annotated
                     </label>
+                    <a class="dropdown-item" v-for="(label, index) in labels">
+                      <label class="checkbox" :disabled="picked != 'completed'">
+                        <input type="checkbox" :value="label.id" v-model="pickedLabels" :disabled="picked != 'completed'"> [[ label.text ]]
+                      </label>
+                    </a>
                   </a>
                 </div>
               </div>
@@ -122,7 +121,7 @@
       </div>
 
       <div class="main">
-        <a class="item" v-for="(doc, index) in docs" v-bind:class="{ active: index == pageNumber }" v-on:click="pageNumber = index"
+        <a class="item" v-for="(doc, index) in docs" v-bind:class="{ active: index == pageNumber }" v-on:click="setDocument(index)"
           v-bind:data-preview-id="index"
           :key="index">
           <span class="icon">
@@ -153,17 +152,22 @@
       <div class="column is-3">
         <progress class="progress is-inline-block" v-bind:class="progressColor" v-bind:value="achievement" max="100">30%</progress>
       </div>
-      <div class="column is-4">
+      <div class="column is-2">
         <span class="ml10" title="documents annotated"><strong>[[ total - remaining ]]</strong></span>/<span title="total documents">[[ total ]]</span>
       </div>
-      <div class="column is-4">
+      <div class="column is-3">
         <div class="field" title="Highlight words and phrases that contribute the most to the prediction of the machine">
           <input id="switchExample" type="checkbox" name="switchExample" class="switch is-success" v-model="explainMode" checked="checked">
           <label for="switchExample">Explain mode</label>
         </div>
       </div>
+      <div v-if="toDelete || toAdd" class="column is-2">
+        <a class="button is-success" @click="approve" title="Approve" :disabled="approveDisabled">
+          [[ mlMode ? 'Approve' : 'Approve' ]]
+        </a>
+      </div>
       <div class="column is-1 has-text-right">
-        <a class="button" @click="isActive=!isActive" title="Annotation guidelines">
+        <a class="button button" @click="isActive=!isActive" title="Annotation guidelines">
           <span class="icon">
             <i class="fas fa-book"></i>
           </span>
@@ -177,7 +181,7 @@
       <a class="button level-left"
          title="Move to the previous record. You can also use the left arrow key as a keyboard shortcut"
          v-on:click="prevPage"
-         v-shortkey="{prev1: ['ctrl', 'p'], prev2: ['arrowup'], prev3: ['arrowleft']}"
+         v-shortkey.once="{prev1: ['ctrl', 'p'], prev2: ['arrowup'], prev3: ['arrowleft']}"
          @shortkey="prevPage">
         <span class="icon">
           <i class="fas fa-chevron-left"></i>
@@ -188,7 +192,7 @@
       <a class="button level-right"
          title="Move to the next record. You can also use the right arrow key as a keyboard shortcut"
          v-on:click="nextPage"
-         v-shortkey="{next1: ['ctrl', 'n'], next2: ['arrowdown'], next3: ['arrowright']}"
+         v-shortkey.once="{next1: ['ctrl', 'n'], next2: ['arrowdown'], next3: ['arrowright']}"
          @shortkey="nextPage">
         <span>Next</span>
         <span class="icon">

@@ -15,6 +15,7 @@ const vm = new Vue({
     isDelete: false,
     project: null,
     selected: 'All Project',
+    duplicateProject: ''
   },
 
   methods: {
@@ -57,6 +58,13 @@ const vm = new Vue({
 
       return daysDiff;
     },
+
+    async getProgress (project) {
+      const result = await axios.get(`${baseUrl}/api/projects/${project.id}/progress/`)
+      if (result && result.data) {
+        Vue.set(project, 'progress', result.data)
+      }
+    }
   },
 
   computed: {
@@ -69,11 +77,19 @@ const vm = new Vue({
       }
       return projects;
     },
+    getAction() {
+      let ret = ''
+      if (this.duplicateProject) {
+        ret = '/api/duplicate/'
+      }
+      return ret
+    }
   },
 
   created() {
-    axios.get(`${baseUrl}/api/projects`).then((response) => {
+    axios.get(`${baseUrl}/api/projects/`).then((response) => {
       this.items = response.data;
+      this.items.forEach(i => this.getProgress(i))
     });
   },
 });

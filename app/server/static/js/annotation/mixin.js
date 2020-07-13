@@ -1,5 +1,11 @@
-import HTTP from './http';
+import HTTP from '../http';
 import Vue from 'vue';
+import VueSweetalert2 from 'vue-sweetalert2';
+ 
+// If you don't need the styles, do not connect
+import 'sweetalert2/dist/sweetalert2.min.css';
+
+Vue.use(VueSweetalert2)
 
 Vue.component('metadata-search', {
   props: ['metadata'],
@@ -192,6 +198,8 @@ const annotationMixin = {
       pageNumber: 0,
       docs: [],
       annotations: [],
+      mlAnnotations: [],
+      currentAnnotations: [],
       labels: [],
       guideline: '',
       total: 0,
@@ -216,13 +224,20 @@ const annotationMixin = {
       metadataRules: [],
       docFromLink: null,
       showLabelers: false,
-      labelers: []
+      labelers: [],
+      preventLabeling: false,
+      sentenceLabeling: true,
+      pickedLabels: [],
+      mlMode: false
     };
   },
 
   methods: {
     async nextPage() {
       this.pageNumber += 1;
+      if (this.labelKeyPress) {
+        this.preventLabeling = true
+      }
       if (this.pageNumber === this.docs.length) {
         if (this.next) {
           this.url = this.next;
@@ -268,6 +283,9 @@ const annotationMixin = {
 
     async prevPage() {
       this.pageNumber -= 1;
+      if (this.labelKeyPress) {
+        this.preventLabeling = true
+      }
       if (this.pageNumber === -1) {
         if (this.prev) {
           this.url = this.prev;
@@ -301,9 +319,11 @@ const annotationMixin = {
         
         
         this.annotations = [];
+        this.mlAnnotations = []
         for (let i = 0; i < this.docs.length; i++) {
           const doc = this.docs[i];
           this.annotations.push(doc.annotations);
+          this.mlAnnotations.push(doc.mlm_annotations);
         }
         
         if (setOffset) {
@@ -356,7 +376,12 @@ const annotationMixin = {
       if (this.picked === 'active') {
         return 'true';
       }
-      return 'false';
+
+      if (this.picked === 'completed' && !this.pickedLabels.length) {
+        return 'false'
+      }
+
+      return this.pickedLabels.join(',')
     },
 
     async submit() {
@@ -373,8 +398,6 @@ const annotationMixin = {
           this.getExplanation(doc.id)
         }
       }
-
-      console.log('subnit')
 
       if (this.showLabelers) {
         const doc = this.docs[0]
@@ -393,7 +416,7 @@ const annotationMixin = {
     removeLabel(annotation) {
       const docId = this.docs[this.pageNumber].id;
       HTTP.delete(`docs/${docId}/annotations/${annotation.id}`).then((response) => {
-        const index = this.annotations[this.pageNumber].indexOf(annotation);
+        const index = this.annotations[this.pageNumber].findIndex(a => a.id === annotation.id);
         this.annotations[this.pageNumber].splice(index, 1);
       });
     },
@@ -407,6 +430,7 @@ const annotationMixin = {
     },
 
     async getExplanation(id) {
+      this.docExplanation = null
       const response = await HTTP.get(`docs/${id}/explanation`)
       if (response.data) {
         this.docExplanation = response.data.document
@@ -437,12 +461,62 @@ const annotationMixin = {
     async metadataSearch(rules) {
       this.metadataRules = rules
       await this.submit()
+    },
+
+    setDocument (index) {
+      if (this.toDelete || this.toAdd) {
+        if (this.toDelete.length || this.toAdd.length) {
+          this.$swal({
+            title: 'Warning',
+            text: 'You have unsaved changes. Proceed?',
+            type: 'warning',
+            showCancelButton: true
+          }).then(async (result) => {
+            if (result.value) {
+              this.toDelete.forEach((td) => {
+                if (Number.isInteger(td.id)) {
+                  this.annotations[this.pageNumber].push(td)
+                }
+              })
+              this.toAdd.forEach((ta) => {
+                if (!Number.isInteger(ta.id)) {
+                  const idx = this.annotations[this.pageNumber].findIndex(a => a.id === ta.id)
+                  this.annotations[this.pageNumber].splice(idx, 1)
+                }
+              })
+              this.pageNumber = index
+              this.toAdd = []
+              this.toDelete = []
+            }
+          })
+        } else {
+          this.pageNumber = index
+        }
+      } else {
+        this.pageNumber = index
+      }
+    },
+
+    rebuildCurrentAnnotations (val) {
+      this.mlMode = false
+      if (this.annotations && this.annotations[val] && this.annotations[val].length) {
+        this.currentAnnotations = this.annotations[val]
+      } else if (this.mlAnnotations && this.mlAnnotations[val] && this.mlAnnotations[val].length) {
+        this.currentAnnotations = this.mlAnnotations[val]
+        this.mlMode = true
+      } else {
+        this.currentAnnotations = []
+      }
     }
   },
 
   watch: {
     picked() {
       this.submit();
+    },
+
+    pickedLabels() {
+      this.submit()
     },
 
     annotations() {
@@ -475,6 +549,8 @@ const annotationMixin = {
           this.getLabelers(doc.id)
         }
       }
+      
+      this.rebuildCurrentAnnotations(val)
     }
   },
 
@@ -486,6 +562,7 @@ const annotationMixin = {
     });
     HTTP.get().then((response) => {
       this.guideline = response.data.guideline;
+      this.sentenceLabeling = response.data.sentence_labeling
     });
     HTTP.get('metadata').then((response) => {
       response.data.metadata.forEach((m) => {
@@ -529,6 +606,8 @@ const annotationMixin = {
       this.getExplanation(doc.id)
     }
 
+    this.rebuildCurrentAnnotations(0)
+
     if (document.getElementById('labelersCard')) {
       this.showLabelers = true
       const doc = this.docs[0]
@@ -550,9 +629,9 @@ const annotationMixin = {
     },
 
     compiledMarkdown() {
-      return marked(this.guideline, {
+      return this.guideline ? marked(this.guideline, {
         sanitize: true,
-      });
+      }) : ''
     },
 
     id2label() {
@@ -586,6 +665,14 @@ const annotationMixin = {
         const json = JSON.parse(this.currentDoc.metadata)
         const str = JSON.stringify(json, undefined, 4);
         return syntaxHighlight(str);
+      }
+      return null;
+    },
+
+    metadataObj() {
+      if (this.currentDoc && this.currentDoc.metadata && this.currentDoc.metadata!='{}') {
+        const json = JSON.parse(this.currentDoc.metadata)
+        return json;
       }
       return null;
     },

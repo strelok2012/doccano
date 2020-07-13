@@ -1,0 +1,126 @@
+{% extends "admin/admin_base.html" %}
+{% load static %}
+{% block content-area %}
+
+<div class="columns">
+  <div class="column is-12">
+    <div class="card">
+      <header class="card-header">
+        <p class="card-header-title">
+          Machine Learning Model Results
+        </p>
+        <a href="#" class="card-header-icon" aria-label="more options">
+          <span class="icon">
+            <i class="fas fa-angle-down" aria-hidden="true"></i>
+          </span>
+        </a>
+      </header>
+
+      <div class="card-content columns">
+        <div class="column is-8">
+            <div>
+              <textarea v-model="labelsMapping"></textarea>
+              <a class="button is-primary" @click="runModel"
+                    title="Train a Machine Learning model to classify documents based on the documents that were already annotated">
+                    Train Machine Learning Model
+                </a>
+            </div>
+
+            <pre>{{ model_results }}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="columns">
+  <div class="column is-12">
+    <div class="card">
+      <header class="card-header">
+        <p class="card-header-title">
+          Machine Learning Model Performance Graphs
+        </p>
+        <a href="#" class="card-header-icon" aria-label="more options">
+          <span class="icon">
+            <i class="fas fa-angle-down" aria-hidden="true"></i>
+          </span>
+        </a>
+      </header>
+
+      <div class="card-content columns">
+        <div class="column is-6">
+              <p class="card-header-title">Precision Recall Curve</p>
+              <img src="data:image/png;base64, {{ image_precision_recall_curve }}" alt="Precision-recall curve" />
+          </div>
+
+        <div class="column is-6">
+              <p class="card-header-title">ROC Curve</p>
+              <img src="data:image/png;base64, {{ image_roc_curve }}" alt="ROC curve" />
+          </div>
+      </div>
+
+      <div class="card-content columns">
+        <div class="column is-6">
+              <p class="card-header-title">Confidence Accuracy Graph</p>
+              <img src="data:image/png;base64, {{ image_confidence_accuracy_graph }}" alt="Confidence-Accuracy graph" />
+          </div>
+
+        <div class="column is-6">
+              <p class="card-header-title">Learning Curve</p>
+              <img src="data:image/png;base64, {{ image_learning_curve }}" alt="Learning curve" />
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="columns">
+  <div class="column is-8">
+
+    <div class="card">
+      <header class="card-header">
+        <p class="card-header-title">
+          Top Features
+        </p>
+        <a href="#" class="card-header-icon" aria-label="more options">
+          <span class="icon">
+            <i class="fas fa-angle-down" aria-hidden="true"></i>
+          </span>
+        </a>
+      </header>
+      <div class="card-content">
+        <vue-good-table
+        :columns="classWeightsColumns"
+        :rows="classWeightsData"
+        :search-options="{
+          enabled: true,
+          trigger: 'enter'
+        }"
+        :pagination-options="{
+          enabled: true,
+          mode: 'pages'
+        }"
+        >
+        </vue-good-table>
+      </div>
+    </div>
+  </div>
+
+  <div class="column is-4">
+
+    <div class="card">
+      <header class="card-header">
+        <p class="card-header-title">
+        </p>
+      </header>
+      <div class="card-content">
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+{% block footer %}
+<script src="{% static 'bundle/ml_model.js' %}"></script>
+{% endblock %}

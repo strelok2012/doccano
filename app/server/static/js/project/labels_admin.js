@@ -1,9 +1,9 @@
 import Vue from 'vue';
-import HTTP from './http';
+import HTTP from '../http';
 
 import { VueGoodTable } from 'vue-good-table';
 
-import { toPercent } from './filters'
+import { toPercent } from '../filters'
 
 import 'vue-good-table/dist/vue-good-table.css'
 
@@ -47,6 +47,10 @@ const vm = new Vue({
       {
         label: 'Ground Truth',
         field: 'groundTruth'
+      },
+      {
+        label: 'Model Label',
+        field: 'modelLabel'
       },
       {
         label: 'Model Confidence',
@@ -106,6 +110,7 @@ const vm = new Vue({
         row.topLabel = this.labelNameById(dataframe.top_label[i]);
         row.groundTruth = this.labelNameById(dataframe.ground_truth[i]);
         row.modelConfidence = dataframe.model_confidence[i];
+        row.modelLabel = this.labelNameById(dataframe.model_label[i]);
         row.lastAnnotationDate = parseDate(dataframe.last_annotation_date[i]);
         row.docText = dataframe.snippet[i];
         row.snippet = dataframe.snippet[i];
