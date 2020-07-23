@@ -26,6 +26,10 @@
         @remove-label="removeLabel" @add-label="addLabel"></sentence-annotator>
       <text-annotator v-else ref="annotator" v-bind:labels="labels" v-bind:entity-positions="currentAnnotations" v-bind:text="docs[pageNumber].text" :sentence-labeling="sentenceLabeling"
         @remove-label="removeLabel" @add-label="addLabel"></text-annotator>
+
+      <p v-for="a in currentAnnotations">
+        [[ a.additional_data ]]
+      </p>
     </div>
   </div>
 </div>

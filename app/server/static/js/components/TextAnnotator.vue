@@ -66,8 +66,21 @@ export default {
           end = start + selectedTextRange.text.length;
         }
 
+        if (this.overlapedAnnotations.length) {
+          const delta = this.overlapedAnnotations.reduce((accumulator, currentValue) => {
+            if (start >= currentValue.end) {
+              return accumulator + (currentValue.end - currentValue.start)
+            }
+
+            return accumulator
+          }, 0);
+
+          start -= delta
+          end -= delta
+        }
+
         this.startOffset = start;
-        this.endOffset = end; 
+        this.endOffset = end;
       },
   
       validRange(labelId) {
@@ -92,11 +105,6 @@ export default {
         }).sort((a, b) => {
           return a.start_offset - b.start_offset
         }).pop()
-
-        /* prevent labels crossing */
-        if (startElement !== endElement) {
-          return false
-        }
 
         /* don't allow to place same label in labeled text */
         if (startElement && startElement.label === labelId) {
@@ -216,6 +224,27 @@ export default {
         }
         return id2label;
       },
+
+      overlapedAnnotations () {
+        const ret = []
+        const compared = []
+        this.sortedEntityPositions.forEach((cmpA) => {
+          this.sortedEntityPositions.forEach((cmpB) => {
+            if (cmpA !== cmpB && !compared.includes(cmpA)) {
+              if (cmpB.start_offset > cmpA.start_offset && cmpB.start_offset < cmpA.end_offset) {
+                if (cmpB.end_offset > cmpA.end_offset) {
+                  compared.push(cmpA)
+                  ret.push({
+                    start: cmpB.start_offset,
+                    end: cmpA.end_offset
+                  })
+                }
+              }
+            }
+          })
+        })
+        return ret
+      }
     },
 }
 </script>

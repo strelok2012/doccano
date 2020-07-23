@@ -1,5 +1,7 @@
 <template>
     <span v-if="labels[element.label]" class="text-sequence"
+            :data-start="element.start_offset"
+            :data-end="element.end_offset"
             v-bind:class="{tag: labels[element.label].text_color}"
             v-bind:style="{ color: labels[element.label].text_color, backgroundColor: labels[element.label].background_color }"
     >{{ chunkText }}<text-annotation v-for="(r, index) in element.childs" :key="index" :text="text" :element="r" :labels="labels" @remove-label="$emit('remove-label', $event)"/><button class="delete is-small"
