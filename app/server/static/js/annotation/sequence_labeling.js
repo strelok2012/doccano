@@ -2,10 +2,12 @@ import Vue from 'vue';
 import * as bulmaToast from 'bulma-toast';
 
 import annotationMixin from './mixin';
-import HTTP from './http';
-import simpleShortcut from './filter';
+import HTTP from '../http';
+import simpleShortcut from '../filter';
 
-Vue.use(require('vue-shortkey'), {
+import vueshortkey from '../vue-shortkey'
+
+Vue.use(vueshortkey, {
   prevent: ['input', 'textarea'],
 });
 

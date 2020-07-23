@@ -6,12 +6,14 @@ import annotationMixin from './mixin';
 import SentenceAnnotator from './components/SentenceAnnotator'
 import TextAnnotator from './components/TextAnnotator'
 
-import HTTP from './http';
-import simpleShortcut from './filter';
+import HTTP from '../http';
+import simpleShortcut from '../filter';
 
-import { uuidv4 } from './utils'
+import { uuidv4 } from '../utils'
 
-Vue.use(require('vue-shortkey'), {
+import vueshortkey from '../vue-shortkey'
+
+Vue.use(vueshortkey, {
   prevent: ['input', 'textarea'],
 });
 
