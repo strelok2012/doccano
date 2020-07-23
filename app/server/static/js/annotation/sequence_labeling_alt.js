@@ -3,8 +3,8 @@ import * as bulmaToast from 'bulma-toast';
 
 import annotationMixin from './mixin';
 
-import SentenceAnnotator from './components/SentenceAnnotator'
-import TextAnnotator from './components/TextAnnotator'
+import SentenceAnnotator from '../components/SentenceAnnotator'
+import TextAnnotator from '../components/TextAnnotator'
 
 import HTTP from '../http';
 import simpleShortcut from '../filter';
